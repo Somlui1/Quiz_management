@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   app:
     build:
@@ -6,7 +8,7 @@ services:
     container_name: quizmaster-app
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3344:3000"
     volumes:
       - ./data:/app/data
     environment:
@@ -18,15 +20,15 @@ services:
 
   ngrok:
     image: ngrok/ngrok:latest
-    container_name: quizmaster-ngrok
+    container_name: ngrok_tunnel
     restart: unless-stopped
-    command:
-      - "http"
-      - "http://app:3000"
+    entrypoint:
+      - ngrok
+      - http
+      - app:3000
+      - --log=stdout
     environment:
-      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
-    ports:
-      - "4040:4040"
+      - NGROK_AUTHTOKEN=3EqP4s2wJvtqdWljDlDVeVrlDI1_4onRdKSRgF4hBvh99mz8d
     depends_on:
       - app
     networks:
