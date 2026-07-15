@@ -28,7 +28,7 @@ services:
       - app:3000
       - --log=stdout
     environment:
-      - NGROK_AUTHTOKEN=3EqP4s2wJvtqdWljDlDVeVrlDI1_4onRdKSRgF4hBvh99mz8d
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
     depends_on:
       - app
     networks:
