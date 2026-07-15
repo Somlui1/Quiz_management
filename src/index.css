@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Bai+Jamjuree:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Sarabun", "Bai Jamjuree", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-brand-dark: #1a202c;
+  --color-brand-blue: #2d3748;
+  --color-brand-accent-blue: #1e3a8a;
+  --color-neo-red: #e11d48;
+  --color-neo-green: #22c55e;
+  --color-aapico-blue: #1D366D;
+  --color-aapico-green: #2DC84D;
+  --color-aapico-grey: #464C59;
+}
+
+/* Custom scrollbar hiding helper */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}
+
+/* Base styling overrides for neo-brutalism sharp design (excluding SweetAlert2 to keep circles and nice dialogs) */
+*:not(.swal2-container):not(.swal2-container *) {
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  border-radius: 0 !important;
+}
+
+/* Neo-Brutalism Custom Classes */
+.neo-border-2 {
+  border: 2px solid #000;
+}
+.neo-border-3 {
+  border: 3px solid #000;
+}
+.neo-shadow-black {
+  box-shadow: 4px 4px 0px 0px #000;
+}
+.neo-shadow-red {
+  box-shadow: 4px 4px 0px 0px #991b1b;
+}
+.neo-button-hover {
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.neo-button-hover:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px 0px #000;
+}
+.neo-button-active:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px 0px #000;
+}
+
+

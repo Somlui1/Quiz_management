@@ -1,0 +1,6 @@
+{
+  "name": "AAPICO SmartEval",
+  "description": "ระบบจัดสอบควิซและประเมินผลอัจฉริยะแบบแยกกลุ่มฐานข้อมูลความปลอดภัยสูง ป้องกันทุจริตและรายงานสถิติเชิงลึกตามแนวทาง Neo-Brutalism ของอาปิโก",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

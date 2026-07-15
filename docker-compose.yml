@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: quizmaster-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    networks:
+      - quiz-network
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: quizmaster-ngrok
+    restart: unless-stopped
+    command:
+      - "http"
+      - "app:3000"
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    ports:
+      - "4040:4040"
+    depends_on:
+      - app
+    networks:
+      - quiz-network
+
+networks:
+  quiz-network:
+    driver: bridge
