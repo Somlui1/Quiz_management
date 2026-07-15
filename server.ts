@@ -1595,6 +1595,50 @@ async function startServer() {
     }
   });
 
+  // API: Reset campaign attempts and submissions
+  app.post("/api/campaigns/:id/reset", (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Ensure campaign exists in masterDb
+      const checkStmt = masterDb.prepare("SELECT id FROM campaigns WHERE id = ?");
+      if (!checkStmt.get(id)) {
+        return res.status(404).json({ error: "ไม่พบห้องสอบที่ระบุ" });
+      }
+
+      // 1. Clear database attempts and submissions in SQLite database specific to this campaign
+      const db = getCampaignDb(id);
+      db.prepare("DELETE FROM submissions").run();
+      db.prepare("DELETE FROM attempts").run();
+
+      // 2. Reset active participants for this campaign in memory
+      if (activeParticipants.has(id)) {
+        activeParticipants.get(id)!.clear();
+      } else {
+        activeParticipants.set(id, new Map());
+      }
+
+      // 3. Broadcast SSE event to all connected clients
+      const clients = liveClients.get(id);
+      if (clients && clients.length > 0) {
+        const payloadStr = JSON.stringify({ type: "reset" });
+        clients.forEach(client => {
+          try {
+            client.write(`data: ${payloadStr}\n\n`);
+          } catch (e) {
+            // client connection probably dead
+          }
+        });
+      }
+
+      res.json({ success: true, message: "รีเซ็ตข้อมูลและล้างประวัติห้องสอบเรียบร้อยแล้ว" });
+    } catch (err: any) {
+      console.error("Failed to reset campaign:", err);
+      res.status(500).json({ error: err.message || "เกิดข้อผิดพลาดในการรีเซ็ตห้องสอบ" });
+    }
+  });
+
+
   // API: Get single campaign for admin (with answers)
   app.get("/api/campaigns/:id/admin", (req, res) => {
     try {

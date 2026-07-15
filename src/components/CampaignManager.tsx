@@ -253,6 +253,32 @@ export default function CampaignManager() {
     }
   };
 
+  const handleResetCampaign = async (id: string) => {
+    const confirmed = await showConfirm(
+      "ยืนยันการรีเซ็ตข้อมูลห้องสอบ?",
+      "การรีเซ็ตนี้จะลบประวัติการสอบ (attempts) และคะแนนสอบทั้งหมด (submissions) ของห้องสอบนี้อย่างถาวร รวมถึงข้อมูลในสมุดเช็คชื่อกลุ่มย่อย (Focus Group) และเคลียร์หน่วยความจำแคชในเบราว์เซอร์ (localStorage) ของห้องสอบนี้ด้วย ป้องกันการกดพลาดโดยไม่ได้ตั้งใจ"
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/campaigns/${id}/reset`, { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "เกิดข้อผิดพลาดในการรีเซ็ตห้องสอบ");
+      }
+      
+      // Clean up localStorage for this campaign
+      localStorage.removeItem(`campaign_attendance_focus_${id}`);
+      localStorage.removeItem(`quiz_progress_${id}`);
+
+      showSuccess("รีเซ็ตห้องสอบสำเร็จ", "ระบบได้ล้างประวัติการสอบ คะแนน และแคชของห้องสอบนี้เรียบร้อยแล้ว");
+      fetchCampaigns();
+    } catch (err: any) {
+      showError("ไม่สามารถรีเซ็ตได้", err.message);
+    }
+  };
+
+
   const toggleCampaignStatus = async (camp: Campaign, newStatus: "ACTIVE" | "COMPLETED" | "DRAFT") => {
     if (newStatus === "ACTIVE" && camp.questions.length === 0) {
       showWarning("ยังไม่มีข้อสอบ", "ไม่สามารถเปิดระบบสอบได้ เนื่องจากยังไม่มีข้อสอบ กรุณาแก้ไขเพื่อเพิ่มข้อสอบก่อน");
@@ -606,6 +632,14 @@ export default function CampaignManager() {
                           >
                             <Trash2 size={14} />
                           </button>
+                          <button
+                            onClick={() => handleResetCampaign(camp.id)}
+                            className="p-1.5 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-none border border-transparent hover:border-black transition-colors cursor-pointer"
+                            title="รีเซ็ตประวัติและคะแนนสอบ"
+                          >
+                            <RotateCcw size={14} />
+                          </button>
+
                         </div>
                       </div>
                     </div>
@@ -1096,7 +1130,7 @@ export default function CampaignManager() {
             <ArrowLeft size={14} />
             กลับหน้ารายการห้องสอบ
           </button>
-          <CampaignAnalytics campaign={selectedCampaign} />
+          <CampaignAnalytics campaign={selectedCampaign} onRefresh={fetchCampaigns} />
         </div>
       )}
 

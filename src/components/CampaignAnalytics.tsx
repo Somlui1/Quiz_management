@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Campaign, Submission, Question } from "../types";
-import { Users, CheckCircle, XCircle, Award, BarChart3, ArrowUpDown, Download, Search, RefreshCw, ChevronDown, ChevronUp, Tv, Sparkles, Clock, Trophy, GraduationCap, Play, Activity, ClipboardCheck, Trash2, Upload, UserPlus, FileSpreadsheet, AlertCircle, Terminal, Wrench } from "lucide-react";
+import { Users, CheckCircle, XCircle, Award, BarChart3, ArrowUpDown, Download, Search, RefreshCw, ChevronDown, ChevronUp, Tv, Sparkles, Clock, Trophy, GraduationCap, Play, Activity, ClipboardCheck, Trash2, Upload, UserPlus, FileSpreadsheet, AlertCircle, Terminal, Wrench, RotateCcw } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { showSuccess, showError, showConfirm } from "../lib/swal";
 
@@ -536,6 +536,42 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
     if (onRefresh) onRefresh();
   };
 
+  const handleResetCampaign = async () => {
+    const confirmed = await showConfirm(
+      "ยืนยันการรีเซ็ตข้อมูลห้องสอบ?",
+      "การรีเซ็ตนี้จะลบประวัติการสอบ (attempts) และคะแนนสอบทั้งหมด (submissions) ของห้องสอบนี้อย่างถาวร รวมถึงข้อมูลในสมุดเช็คชื่อกลุ่มย่อย (Focus Group) และเคลียร์หน่วยความจำแคชในเบราว์เซอร์ (localStorage) ของห้องสอบนี้ด้วย ป้องกันการกดพลาดโดยไม่ได้ตั้งใจ"
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/campaigns/${campaign.id}/reset`, { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "เกิดข้อผิดพลาดในการรีเซ็ตห้องสอบ");
+      }
+      
+      // Clean up local states
+      setSubmissions([]);
+      setActiveParticipants([]);
+      setAttendanceList([]);
+
+      // Clean up localStorage for this campaign
+      localStorage.removeItem(`campaign_attendance_focus_${campaign.id}`);
+      localStorage.removeItem(`quiz_progress_${campaign.id}`);
+
+      showSuccess("รีเซ็ตห้องสอบสำเร็จ", "ระบบได้ล้างประวัติการสอบ คะแนน และแคชของห้องสอบนี้เรียบร้อยแล้ว");
+      
+      if (onRefresh) {
+        onRefresh();
+      } else {
+        refreshAllData();
+      }
+    } catch (err: any) {
+      showError("ไม่สามารถรีเซ็ตได้", err.message);
+    }
+  };
+
+
   useEffect(() => {
     fetchSubmissions();
     fetchActiveParticipants();
@@ -582,7 +618,17 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
               }
             ]);
           }
+        } else if (data.type === "reset") {
+          // Clear active participants and submissions immediately from the view state
+          setActiveParticipants([]);
+          setSubmissions([]);
+          setToastQueue([]);
+          setActiveToasts([]);
+          setAttendanceList([]);
+          localStorage.removeItem(`campaign_attendance_focus_${campaign.id}`);
+          localStorage.removeItem(`quiz_progress_${campaign.id}`);
         }
+
       } catch (err) {
         console.error("Error handling SSE event message:", err);
       }
@@ -812,6 +858,14 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
             title="รีเฟรชข้อมูล"
           >
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+          </button>
+          <button
+            type="button"
+            onClick={handleResetCampaign}
+            className="inline-flex items-center justify-center p-2.5 text-white bg-rose-500 hover:bg-rose-600 rounded-none transition-all cursor-pointer border-3 border-black shadow-[4px_4px_0px_0px_#464C59] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none h-[38px] sm:h-[44px] w-[38px] sm:w-[44px]"
+            title="รีเซ็ตข้อมูลห้องสอบ"
+          >
+            <RotateCcw size={14} />
           </button>
         </div>
       </div>
