@@ -69,7 +69,14 @@ try {
 
 export default function App() {
   // Read query parameters
-  const [urlCampaignId, setUrlCampaignId] = useState<string | null>(null);
+  const [urlCampaignId, setUrlCampaignId] = useState<string | null>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("campaignId")?.trim().toLowerCase() || null;
+    } catch (_) {
+      return null;
+    }
+  });
   const [activeTab, setActiveTab] = useState<"student" | "admin">("student");
   const [adminMenu, setAdminMenu] = useState<"bank" | "campaigns" | "branding" | "roles">("bank");
   const [inputCampaignId, setInputCampaignId] = useState("");
