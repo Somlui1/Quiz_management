@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>report.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="%F0%9F%93%98-quizmaster-pro--project-architecture--data-flow-report">📘 Quizmaster Pro — Project Architecture &amp; Data Flow Report</h1>
+<h1 id="%E0%B8%A3%E0%B8%B2%E0%B8%A2%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B9%82%E0%B8%84%E0%B8%A3%E0%B8%87%E0%B8%AA%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%87%E0%B8%A3%E0%B8%B0%E0%B8%9A%E0%B8%9A%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B9%84%E0%B8%AB%E0%B8%A5%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%A1%E0%B8%B9%E0%B8%A5">รายงานโครงสร้างระบบและการไหลของข้อมูล</h1>
+<hr>
+<h2 id="1-%E0%B8%A0%E0%B8%B2%E0%B8%9E%E0%B8%A3%E0%B8%A7%E0%B8%A1%E0%B8%A3%E0%B8%B0%E0%B8%9A%E0%B8%9A-system-overview">1. ภาพรวมระบบ (System Overview)</h2>
+<p>Quizmaster Pro คือระบบจัดสอบออนไลน์แบบ Monolithic ที่ถูกออกแบบมาเพื่อใช้ภายในองค์กร (Enterprise) สำหรับจัดการการสอบ/ประเมินความรู้พนักงาน โดยรองรับการทำงานแบบ Real-time ผ่าน Server-Sent Events (SSE)</p>
+<p>Quizmaster Pro is a monolithic online examination system designed for internal enterprise use. It manages employee knowledge assessments and supports real-time monitoring via Server-Sent Events (SSE).</p>
+<h3 id="tech-stack">Tech Stack</h3>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Technology</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Frontend</strong></td>
+<td>React 19 + TypeScript</td>
+<td>Single-Page Application (SPA)</td>
+</tr>
+<tr>
+<td><strong>Styling</strong></td>
+<td>TailwindCSS v4</td>
+<td>Utility-first CSS framework</td>
+</tr>
+<tr>
+<td><strong>Backend</strong></td>
+<td>Node.js + Express 4</td>
+<td>REST API Server</td>
+</tr>
+<tr>
+<td><strong>Database</strong></td>
+<td>SQLite via <code>better-sqlite3</code></td>
+<td>Embedded relational database</td>
+</tr>
+<tr>
+<td><strong>Auth</strong></td>
+<td><code>jsonwebtoken</code> + <code>bcryptjs</code></td>
+<td>JWT tokens &amp; password hashing</td>
+</tr>
+<tr>
+<td><strong>Build</strong></td>
+<td>Vite + esbuild</td>
+<td>Frontend bundling &amp; server compilation</td>
+</tr>
+<tr>
+<td><strong>Deployment</strong></td>
+<td>Docker + NGINX + ngrok</td>
+<td>Containerized with reverse proxy</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="2-%E0%B9%82%E0%B8%84%E0%B8%A3%E0%B8%87%E0%B8%AA%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%87%E0%B9%84%E0%B8%9F%E0%B8%A5%E0%B9%8C%E0%B9%82%E0%B8%9B%E0%B8%A3%E0%B9%80%E0%B8%88%E0%B8%81%E0%B8%95%E0%B9%8C-project-file-structure">2. โครงสร้างไฟล์โปรเจกต์ (Project File Structure)</h2>
+<pre class="hljs"><code><div>quizmaster-pro/
+├── server.ts                    # 🖥️ Express API server (~2,800 lines)
+├── src/
+│   ├── App.tsx                  # 🏠 Root component, routing, admin login
+│   ├── main.tsx                 # React entry point
+│   ├── types.ts                 # Shared TypeScript interfaces
+│   ├── index.css                # Global CSS
+│   ├── lib/
+│   │   └── swal.ts             # SweetAlert2 dialog utilities
+│   └── components/
+│       ├── QuizTaker.tsx        # 📝 Student exam-taking UI
+│       ├── CampaignManager.tsx  # 📋 Admin campaign CRUD
+│       ├── CampaignAnalytics.tsx # 📊 Live lobby + analytics dashboard
+│       ├── QuestionBank.tsx     # 💾 Admin question bank editor
+│       ├── AdminRolesManager.tsx # 👥 Admin roles &amp; permissions
+│       ├── BrandingGuidelines.tsx # 🎨 Design system reference
+│       ├── BulkUpload.tsx       # 📤 Bulk question import
+│       ├── FormBuilder.tsx      # 🔧 Dynamic form construction
+│       └── AAPICOSmartEvalLogo.tsx # 🖼️ SVG logo component
+├── data/                        # 📁 SQLite database files (runtime)
+│   ├── master.db               # Master database
+│   └── campaign_*.db           # Per-campaign isolated databases
+├── docker-compose.yml           # 🐳 Docker orchestration
+├── Dockerfile                   # 🏗️ Multi-stage build
+├── nginx.conf                   # 🛡️ Reverse proxy &amp; rate limiting
+├── .env.example                 # 🔑 Environment variable template
+├── package.json                 # 📦 Dependencies &amp; scripts
+├── vite.config.ts               # ⚡ Vite configuration
+└── tsconfig.json                # TypeScript configuration
+</div></code></pre>
+<hr>
+<h2 id="3-%E0%B8%AA%E0%B8%96%E0%B8%B2%E0%B8%9B%E0%B8%B1%E0%B8%95%E0%B8%A2%E0%B8%81%E0%B8%A3%E0%B8%A3%E0%B8%A1%E0%B8%90%E0%B8%B2%E0%B8%99%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%A1%E0%B8%B9%E0%B8%A5-database-architecture">3. สถาปัตยกรรมฐานข้อมูล (Database Architecture)</h2>
+<p>ระบบใช้แนวคิด <strong>Dual-Database Architecture</strong> โดยแยกฐานข้อมูลหลัก (Master) ออกจากฐานข้อมูลห้องสอบ (Campaign) เพื่อประสิทธิภาพและความเป็นอิสระ</p>
+<p>The system uses a <strong>Dual-Database Architecture</strong>, separating the master database from per-campaign databases for performance and isolation.</p>
+<pre><code class="language-mermaid"><div class="mermaid">graph LR
+    subgraph "Master Database (master.db)"
+        A["campaigns"] 
+        B["admins"]
+        C["questions"]
+        D["exam_packets"]
+    end
+    subgraph "Campaign DB (campaign_*.db)"
+        E["submissions"]
+        F["attempts"]
+    end
+    A -->|"getCampaignDb(id)"| E
+    A -->|"getCampaignDb(id)"| F
+</div></code></pre>
+<h3 id="31-master-database-masterdb">3.1 Master Database (<code>master.db</code>)</h3>
+<h4 id="table-campaigns">Table: <code>campaigns</code></h4>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>TEXT PK</td>
+<td>Unique campaign identifier</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>TEXT</td>
+<td>Campaign display name</td>
+</tr>
+<tr>
+<td><code>group_name</code></td>
+<td>TEXT</td>
+<td>Target group/department</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>TEXT</td>
+<td><code>DRAFT</code> / <code>ACTIVE</code> / <code>COMPLETED</code></td>
+</tr>
+<tr>
+<td><code>start_time</code></td>
+<td>TEXT</td>
+<td>Auto-open timestamp (nullable)</td>
+</tr>
+<tr>
+<td><code>end_time</code></td>
+<td>TEXT</td>
+<td>Auto-close timestamp (nullable)</td>
+</tr>
+<tr>
+<td><code>passing_percentage</code></td>
+<td>INT</td>
+<td>Score threshold to pass</td>
+</tr>
+<tr>
+<td><code>time_limit_minutes</code></td>
+<td>INT</td>
+<td>Exam duration</td>
+</tr>
+<tr>
+<td><code>total_questions_to_test</code></td>
+<td>INT</td>
+<td>Questions to sample from pool</td>
+</tr>
+<tr>
+<td><code>max_attempts</code></td>
+<td>INT</td>
+<td>Maximum retakes (0 = unlimited)</td>
+</tr>
+<tr>
+<td><code>results_display_mode</code></td>
+<td>TEXT</td>
+<td><code>full</code> / <code>score_only</code></td>
+</tr>
+<tr>
+<td><code>is_untimed</code></td>
+<td>INT</td>
+<td>0 or 1 boolean</td>
+</tr>
+<tr>
+<td><code>randomization_mode</code></td>
+<td>TEXT</td>
+<td><code>static</code> / <code>fix_random</code> / <code>fully_random</code></td>
+</tr>
+<tr>
+<td><code>questions_json</code></td>
+<td>TEXT</td>
+<td>Legacy embedded questions JSON</td>
+</tr>
+<tr>
+<td><code>question_selection_mode</code></td>
+<td>TEXT</td>
+<td><code>manual</code> / <code>random</code> / <code>rule</code></td>
+</tr>
+<tr>
+<td><code>manual_question_ids_json</code></td>
+<td>TEXT</td>
+<td>Selected question IDs array</td>
+</tr>
+<tr>
+<td><code>target_booklet</code></td>
+<td>TEXT</td>
+<td>Booklet filter for rule-based</td>
+</tr>
+<tr>
+<td><code>rule_category</code></td>
+<td>TEXT</td>
+<td>Category filter</td>
+</tr>
+<tr>
+<td><code>rule_difficulty</code></td>
+<td>TEXT</td>
+<td>Difficulty filter</td>
+</tr>
+<tr>
+<td><code>rule_count</code></td>
+<td>INT</td>
+<td>Number to draw from pool</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>TEXT</td>
+<td>Creation timestamp</td>
+</tr>
+<tr>
+<td><code>updated_at</code></td>
+<td>TEXT</td>
+<td>Last update timestamp</td>
+</tr>
+</tbody>
+</table>
+<h4 id="table-admins">Table: <code>admins</code></h4>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>TEXT PK</td>
+<td>Admin identifier</td>
+</tr>
+<tr>
+<td><code>username_or_id</code></td>
+<td>TEXT UNIQUE</td>
+<td>Login username or Employee ID</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>TEXT</td>
+<td>Display name</td>
+</tr>
+<tr>
+<td><code>department</code></td>
+<td>TEXT</td>
+<td>Department</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td>TEXT</td>
+<td><code>system</code> (local) or <code>ess</code> (ESS-linked)</td>
+</tr>
+<tr>
+<td><code>password</code></td>
+<td>TEXT</td>
+<td>bcrypt hash (system only)</td>
+</tr>
+<tr>
+<td><code>role</code></td>
+<td>TEXT</td>
+<td><code>super_admin</code> or <code>admin</code></td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>TEXT</td>
+<td>Creation timestamp</td>
+</tr>
+</tbody>
+</table>
+<h4 id="table-questions">Table: <code>questions</code></h4>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>TEXT PK</td>
+<td>Question identifier</td>
+</tr>
+<tr>
+<td><code>text</code></td>
+<td>TEXT</td>
+<td>Question body</td>
+</tr>
+<tr>
+<td><code>options_json</code></td>
+<td>TEXT</td>
+<td>JSON array of answer options</td>
+</tr>
+<tr>
+<td><code>correct_index</code></td>
+<td>INT</td>
+<td>Index of correct option</td>
+</tr>
+<tr>
+<td><code>explanation</code></td>
+<td>TEXT</td>
+<td>Answer explanation</td>
+</tr>
+<tr>
+<td><code>category</code></td>
+<td>TEXT</td>
+<td>Subject category</td>
+</tr>
+<tr>
+<td><code>difficulty</code></td>
+<td>TEXT</td>
+<td>Difficulty level</td>
+</tr>
+<tr>
+<td><code>booklet</code></td>
+<td>TEXT</td>
+<td>Booklet/exam set grouping</td>
+</tr>
+<tr>
+<td><code>packet_id</code></td>
+<td>TEXT</td>
+<td>FK to exam_packets</td>
+</tr>
+</tbody>
+</table>
+<h4 id="table-exampackets">Table: <code>exam_packets</code></h4>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>TEXT PK</td>
+<td>Packet identifier</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>TEXT UNIQUE</td>
+<td>Packet display name</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>TEXT</td>
+<td>Creation timestamp</td>
+</tr>
+</tbody>
+</table>
+<h3 id="32-campaign-database-campaigniddb">3.2 Campaign Database (<code>campaign_{id}.db</code>)</h3>
+<p>Each campaign spawns its own isolated SQLite file containing:</p>
+<h4 id="table-submissions">Table: <code>submissions</code></h4>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>INT PK</td>
+<td>Auto-incremented</td>
+</tr>
+<tr>
+<td><code>user_name</code></td>
+<td>TEXT</td>
+<td>Student name</td>
+</tr>
+<tr>
+<td><code>user_identifier</code></td>
+<td>TEXT</td>
+<td>Employee ID</td>
+</tr>
+<tr>
+<td><code>department</code></td>
+<td>TEXT</td>
+<td>Department</td>
+</tr>
+<tr>
+<td><code>surname</code></td>
+<td>TEXT</td>
+<td>Surname</td>
+</tr>
+<tr>
+<td><code>em_no</code></td>
+<td>TEXT</td>
+<td>Employee number</td>
+</tr>
+<tr>
+<td><code>company_email</code></td>
+<td>TEXT</td>
+<td>Company email</td>
+</tr>
+<tr>
+<td><code>company</code></td>
+<td>TEXT</td>
+<td>Company code</td>
+</tr>
+<tr>
+<td><code>score</code></td>
+<td>REAL</td>
+<td>Score percentage</td>
+</tr>
+<tr>
+<td><code>total_questions</code></td>
+<td>INT</td>
+<td>Total questions</td>
+</tr>
+<tr>
+<td><code>correct_answers</code></td>
+<td>INT</td>
+<td>Correct count</td>
+</tr>
+<tr>
+<td><code>passed</code></td>
+<td>INT</td>
+<td>0 or 1</td>
+</tr>
+<tr>
+<td><code>submitted_at</code></td>
+<td>TEXT</td>
+<td>Submission timestamp</td>
+</tr>
+<tr>
+<td><code>duration_seconds</code></td>
+<td>INT</td>
+<td>Time taken</td>
+</tr>
+<tr>
+<td><code>answers_json</code></td>
+<td>TEXT</td>
+<td>Student's answers map</td>
+</tr>
+</tbody>
+</table>
+<h4 id="table-attempts">Table: <code>attempts</code></h4>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>TEXT PK</td>
+<td>Attempt identifier</td>
+</tr>
+<tr>
+<td><code>user_identifier</code></td>
+<td>TEXT</td>
+<td>Employee ID</td>
+</tr>
+<tr>
+<td><code>questions_json</code></td>
+<td>TEXT</td>
+<td>Randomized questions (with answers)</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>TEXT</td>
+<td>Attempt start time</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="4-api-endpoint-catalog">4. API Endpoint Catalog</h2>
+<h3 id="41-authentication-public">4.1 Authentication (Public)</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Auth</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/auth</code></td>
+<td>None</td>
+<td>Unified login (System Admin / ESS / Student)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="42-admin-only-endpoints-jwt-admin-required">4.2 Admin-Only Endpoints (JWT Admin Required)</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/admins</code></td>
+<td>List all administrators</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/admins</code></td>
+<td>Create admin account</td>
+</tr>
+<tr>
+<td><code>PUT</code></td>
+<td><code>/api/admins/:id</code></td>
+<td>Update admin</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/api/admins/:id</code></td>
+<td>Remove admin</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/admin/reset</code></td>
+<td>Full system reset</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/ess/lookup/:id</code></td>
+<td>ESS employee search</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/packets</code></td>
+<td>List exam packets</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/packets</code></td>
+<td>Create packet</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/api/packets/:id</code></td>
+<td>Delete packet</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/questions</code></td>
+<td>List all questions</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/questions</code></td>
+<td>Create question</td>
+</tr>
+<tr>
+<td><code>PUT</code></td>
+<td><code>/api/questions/:id</code></td>
+<td>Update question</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/api/questions/:id</code></td>
+<td>Delete question</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/questions/bulk</code></td>
+<td>Bulk import questions</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/campaigns</code></td>
+<td>List all campaigns</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/campaigns</code></td>
+<td>Create campaign</td>
+</tr>
+<tr>
+<td><code>PUT</code></td>
+<td><code>/api/campaigns/:id</code></td>
+<td>Update campaign</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/api/campaigns/:id</code></td>
+<td>Delete campaign + DB file</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/campaigns/:id/reset</code></td>
+<td>Reset campaign data</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/campaigns/:id/admin</code></td>
+<td>Campaign details (with answers)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/campaigns/:id/participants</code></td>
+<td>Active participants list</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/campaigns/:id/submissions</code></td>
+<td>All submissions</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/campaigns/:id/simulate</code></td>
+<td>Mock 50 submissions</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/campaigns/:id/stress-test</code></td>
+<td>Stress test simulation</td>
+</tr>
+</tbody>
+</table>
+<h3 id="43-student-endpoints-jwt-student-required">4.3 Student Endpoints (JWT Student Required)</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Auth</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/campaigns/:id/attempts/:identifier</code></td>
+<td>Student JWT</td>
+<td>Check remaining attempts</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/campaigns/:id/start-attempt</code></td>
+<td>Student JWT</td>
+<td>Start exam (get randomized questions)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/campaigns/:id/join</code></td>
+<td>Student JWT</td>
+<td>Join live lobby</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/campaigns/:id/submit</code></td>
+<td>Student JWT</td>
+<td>Submit exam answers</td>
+</tr>
+</tbody>
+</table>
+<h3 id="44-public-endpoints-no-auth">4.4 Public Endpoints (No Auth)</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/campaigns/:id/student</code></td>
+<td>Campaign info (answers stripped)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/campaigns/:id/live</code></td>
+<td>SSE connection for live board</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="5-%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B9%84%E0%B8%AB%E0%B8%A5%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%A1%E0%B8%B9%E0%B8%A5-data-flow">5. การไหลของข้อมูล (Data Flow)</h2>
+<h3 id="51-admin-login-flow-%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B9%80%E0%B8%82%E0%B9%89%E0%B8%B2%E0%B8%AA%E0%B8%B9%E0%B9%88%E0%B8%A3%E0%B8%B0%E0%B8%9A%E0%B8%9A%E0%B8%9C%E0%B8%B9%E0%B9%89%E0%B8%94%E0%B8%B9%E0%B9%81%E0%B8%A5">5.1 Admin Login Flow (การเข้าสู่ระบบผู้ดูแล)</h3>
+<pre><code class="language-mermaid"><div class="mermaid">sequenceDiagram
+    participant Admin as Admin Browser
+    participant NGINX as NGINX Proxy
+    participant Server as Express Server
+    participant MasterDB as master.db
+    participant ESS as ESS Aapico API
+
+    Admin->>NGINX: POST /api/auth {identifier, password, isAdminLogin: true}
+    NGINX->>NGINX: Rate limit check (auth_limit: 5r/s)
+    NGINX->>Server: Forward request
+
+    alt System Account
+        Server->>MasterDB: SELECT * FROM admins WHERE type='system'
+        MasterDB-->>Server: Admin row
+        Server->>Server: bcrypt.compareSync(password, hash)
+        Server->>Server: jwt.sign({isAdmin: true, role, type: 'system'})
+        Server-->>Admin: {jwt: "eyJ...", user: {...}}
+    else ESS Account
+        Server->>ESS: POST https://ess.aapico.com/auth/local
+        ESS-->>Server: {jwt, user: {idCard, birthday}}
+        Server->>ESS: GET /employees/preinfo?id_card=...
+        ESS-->>Server: Employee profile
+        Server->>MasterDB: SELECT * FROM admins WHERE type='ess' AND id=...
+        MasterDB-->>Server: ESS Admin row (role check)
+        Server->>Server: jwt.sign({isAdmin: true, role, type: 'ess'})
+        Server-->>Admin: {jwt: "eyJ...", user: {...}}
+    end
+
+    Admin->>Admin: localStorage.setItem("authenticated_admin_jwt", jwt)
+</div></code></pre>
+<h3 id="52-student-login--exam-flow-%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B9%80%E0%B8%82%E0%B9%89%E0%B8%B2%E0%B8%AA%E0%B8%AD%E0%B8%9A%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B8%99%E0%B8%B1%E0%B8%81%E0%B9%80%E0%B8%A3%E0%B8%B5%E0%B8%A2%E0%B8%99%E0%B8%9E%E0%B8%99%E0%B8%B1%E0%B8%81%E0%B8%87%E0%B8%B2%E0%B8%99">5.2 Student Login &amp; Exam Flow (การเข้าสอบของนักเรียน/พนักงาน)</h3>
+<pre><code class="language-mermaid"><div class="mermaid">sequenceDiagram
+    participant Student as Student Browser
+    participant NGINX as NGINX Proxy
+    participant Server as Express Server
+    participant MasterDB as master.db
+    participant CampDB as campaign_{id}.db
+    participant ESS as ESS Aapico API
+    participant LiveBoard as Admin Live Board (SSE)
+
+    Note over Student: Step 1: Login via ESS
+    Student->>NGINX: POST /api/auth {identifier, password}
+    NGINX->>Server: Forward
+    Server->>ESS: POST /auth/local → GET /employees/preinfo
+    ESS-->>Server: Employee profile
+    Server->>Server: jwt.sign({employeeId, name, type: "student"})
+    Server-->>Student: {jwt: "eyJ...", user: {...}}
+    Student->>Student: Store JWT in userProfile.jwt
+
+    Note over Student: Step 2: Check Remaining Attempts
+    Student->>NGINX: GET /api/campaigns/{id}/attempts/{empId} [Bearer JWT]
+    NGINX->>Server: Forward
+    Server->>Server: authenticateStudentJWT → verify identity
+    Server->>CampDB: SELECT COUNT(*) FROM submissions WHERE user_identifier=?
+    CampDB-->>Server: {count: N}
+    Server-->>Student: {allowed: true/false, attemptsCount: N}
+
+    Note over Student: Step 3: Start Exam Attempt
+    Student->>NGINX: POST /api/campaigns/{id}/start-attempt [Bearer JWT]
+    NGINX->>Server: Forward
+    Server->>Server: authenticateStudentJWT → verify identity match
+    Server->>MasterDB: SELECT * FROM campaigns (get questions)
+    Server->>Server: Randomize & shuffle questions/choices
+    Server->>CampDB: INSERT INTO attempts (store randomized set with answers)
+    Server-->>Student: {attemptId, questions: [...]} (answers STRIPPED)
+
+    Note over Student: Step 4: Join Live Lobby
+    Student->>NGINX: POST /api/campaigns/{id}/join [Bearer JWT]
+    NGINX->>Server: Forward
+    Server->>Server: authenticateStudentJWT → verify identity match
+    Server->>Server: activeParticipants.set(empId, {...})
+    Server->>LiveBoard: SSE push {type: "join", participant: {...}}
+
+    Note over Student: Step 5: Submit Answers
+    Student->>NGINX: POST /api/campaigns/{id}/submit [Bearer JWT]
+    NGINX->>Server: Forward
+    Server->>Server: authenticateStudentJWT → verify identity match
+    Server->>CampDB: SELECT questions_json FROM attempts WHERE id=?
+    Server->>Server: Grade answers server-side (compare with correctIndex)
+    Server->>CampDB: INSERT INTO submissions
+    Server->>LiveBoard: SSE push {type: "submission", submission: {...}}
+    Server-->>Student: {scorePercent, passed, answersEvaluation: [...]}
+</div></code></pre>
+<h3 id="53-real-time-live-board-sse-%E0%B8%81%E0%B8%A3%E0%B8%B0%E0%B8%94%E0%B8%B2%E0%B8%99%E0%B8%95%E0%B8%B4%E0%B8%94%E0%B8%95%E0%B8%B2%E0%B8%A1%E0%B8%AA%E0%B8%94">5.3 Real-Time Live Board (SSE) (กระดานติดตามสด)</h3>
+<pre><code class="language-mermaid"><div class="mermaid">sequenceDiagram
+    participant Admin as Admin Browser
+    participant Server as Express Server
+
+    Admin->>Server: GET /api/campaigns/{id}/live (SSE Connection)
+    Server->>Server: res.setHeader("Content-Type", "text/event-stream")
+    Server->>Server: liveClients.get(id).push(res)
+    Server-->>Admin: data: {"type": "connected"}
+
+    loop Real-Time Events
+        Note over Server: When student joins
+        Server-->>Admin: data: {"type": "join", "participant": {...}}
+
+        Note over Server: When student submits
+        Server-->>Admin: data: {"type": "submission", "submission": {...}}
+
+        Note over Server: When admin resets campaign
+        Server-->>Admin: data: {"type": "reset"}
+    end
+
+    Admin->>Server: Connection closed (onclose)
+    Server->>Server: Remove from liveClients array
+</div></code></pre>
+<hr>
+<h2 id="6-%E0%B8%AA%E0%B8%96%E0%B8%B2%E0%B8%9B%E0%B8%B1%E0%B8%95%E0%B8%A2%E0%B8%81%E0%B8%A3%E0%B8%A3%E0%B8%A1%E0%B8%81%E0%B8%B2%E0%B8%A3-deploy-deployment-architecture">6. สถาปัตยกรรมการ Deploy (Deployment Architecture)</h2>
+<pre><code class="language-mermaid"><div class="mermaid">graph TB
+    subgraph "Internet"
+        User["🌐 Users (Browser)"]
+    end
+
+    subgraph "Docker Network (quiz-network)"
+        subgraph "NGINX Container"
+            NG["🛡️ nginx:alpine<br/>Port 80<br/>Rate Limiting"]
+        end
+        subgraph "App Container"
+            APP["🖥️ node:20-bullseye-slim<br/>Port 3000<br/>Express + Vite SSR"]
+            DB["💾 SQLite Files<br/>(./data volume mount)"]
+            APP --> DB
+        end
+        subgraph "Ngrok Container"
+            NGROK["🔗 ngrok/ngrok<br/>Tunnel to nginx:80"]
+        end
+    end
+
+    subgraph "External Services"
+        ESS["🏢 ESS Aapico API<br/>ess.aapico.com"]
+    end
+
+    User -->|"Port 3344"| NG
+    User -->|"*.ngrok-free.app"| NGROK
+    NGROK -->|"HTTP"| NG
+    NG -->|"Proxy Pass"| APP
+    APP -->|"Auth + Employee Lookup"| ESS
+</div></code></pre>
+<h3 id="container-roles">Container Roles</h3>
+<table>
+<thead>
+<tr>
+<th>Container</th>
+<th>Image</th>
+<th>Port</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>quizmaster-nginx</code></td>
+<td><code>nginx:alpine</code></td>
+<td><code>3344:80</code></td>
+<td>Reverse proxy, rate limiting, security</td>
+</tr>
+<tr>
+<td><code>quizmaster-app</code></td>
+<td>Custom (Dockerfile)</td>
+<td><code>3000</code> (internal)</td>
+<td>Node.js API + SPA serving</td>
+</tr>
+<tr>
+<td><code>ngrok_tunnel</code></td>
+<td><code>ngrok/ngrok</code></td>
+<td>—</td>
+<td>Public HTTPS tunnel (optional)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="rate-limiting-configuration">Rate Limiting Configuration</h3>
+<table>
+<thead>
+<tr>
+<th>Zone</th>
+<th>Rate</th>
+<th>Burst</th>
+<th>Applied To</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>auth_limit</code></td>
+<td>5 req/s per IP</td>
+<td>10</td>
+<td><code>/api/auth</code> (login endpoint)</td>
+</tr>
+<tr>
+<td><code>student_api_limit</code></td>
+<td>15 req/s per IP</td>
+<td>30</td>
+<td><code>/api/campaigns/*</code> (all campaign APIs)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="7-security-architecture-%E0%B8%AA%E0%B8%96%E0%B8%B2%E0%B8%9B%E0%B8%B1%E0%B8%95%E0%B8%A2%E0%B8%81%E0%B8%A3%E0%B8%A3%E0%B8%A1%E0%B8%84%E0%B8%A7%E0%B8%B2%E0%B8%A1%E0%B8%9B%E0%B8%A5%E0%B8%AD%E0%B8%94%E0%B8%A0%E0%B8%B1%E0%B8%A2">7. Security Architecture (สถาปัตยกรรมความปลอดภัย)</h2>
+<pre><code class="language-mermaid"><div class="mermaid">graph TD
+    subgraph "Layer 1: Network (NGINX)"
+        RL["Rate Limiting<br/>(auth_limit, student_api_limit)"]
+    end
+
+    subgraph "Layer 2: Authentication (Express Middleware)"
+        AdminJWT["authenticateAdminJWT<br/>Checks: isAdmin=true"]
+        StudentJWT["authenticateStudentJWT<br/>Checks: type='student'"]
+    end
+
+    subgraph "Layer 3: Identity Enforcement (Per-Endpoint)"
+        IE["req.student.employeeId === req.body.userIdentifier"]
+    end
+
+    subgraph "Layer 4: Data Protection"
+        BC["bcrypt password hashing (salt=10)"]
+        PS["Parameterized SQL queries"]
+        ST["Answer stripping for /student endpoints"]
+    end
+
+    RL --> AdminJWT
+    RL --> StudentJWT
+    StudentJWT --> IE
+    AdminJWT --> BC
+    StudentJWT --> PS
+    IE --> ST
+</div></code></pre>
+<h3 id="jwt-token-types">JWT Token Types</h3>
+<table>
+<thead>
+<tr>
+<th>Token Type</th>
+<th>Signed By</th>
+<th>Payload</th>
+<th>Used By</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Admin JWT</strong></td>
+<td><code>JWT_SECRET</code></td>
+<td><code>{username_or_id, role, type, isAdmin: true}</code></td>
+<td>Admin panel APIs</td>
+</tr>
+<tr>
+<td><strong>Student JWT</strong></td>
+<td><code>JWT_SECRET</code></td>
+<td><code>{employeeId, name, type: &quot;student&quot;}</code></td>
+<td>Student exam APIs</td>
+</tr>
+</tbody>
+</table>
+<h3 id="token-lifecycle">Token Lifecycle</h3>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Storage Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Admin Login</td>
+<td><code>localStorage[&quot;authenticated_admin_jwt&quot;]</code></td>
+<td>Set token</td>
+</tr>
+<tr>
+<td>Admin Logout</td>
+<td><code>localStorage[&quot;authenticated_admin_jwt&quot;]</code></td>
+<td>Remove token</td>
+</tr>
+<tr>
+<td>Student Login</td>
+<td><code>userProfile.jwt</code> (React state)</td>
+<td>Set token</td>
+</tr>
+<tr>
+<td>Student Logout</td>
+<td><code>localStorage[&quot;authenticated_user_profile&quot;]</code></td>
+<td>Remove profile + token</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="8-frontend-component-architecture-%E0%B8%AA%E0%B8%96%E0%B8%B2%E0%B8%9B%E0%B8%B1%E0%B8%95%E0%B8%A2%E0%B8%81%E0%B8%A3%E0%B8%A3%E0%B8%A1-component">8. Frontend Component Architecture (สถาปัตยกรรม Component)</h2>
+<pre><code class="language-mermaid"><div class="mermaid">graph TD
+    APP["App.tsx<br/>🏠 Root Component<br/>Routing + Admin Auth"]
+
+    APP -->|"?campaign={id}"| QT["QuizTaker.tsx<br/>📝 Student Exam UI"]
+    APP -->|"Admin Tab → Bank"| QB["QuestionBank.tsx<br/>💾 Question CRUD"]
+    APP -->|"Admin Tab → Campaigns"| CM["CampaignManager.tsx<br/>📋 Campaign CRUD"]
+    APP -->|"Admin Tab → Roles"| AR["AdminRolesManager.tsx<br/>👥 Admin Management"]
+    APP -->|"Admin Tab → Branding"| BG["BrandingGuidelines.tsx<br/>🎨 Design System"]
+
+    CM -->|"Select Campaign"| CA["CampaignAnalytics.tsx<br/>📊 Analytics + Live Lobby"]
+    QB -->|"Bulk Import"| BU["BulkUpload.tsx<br/>📤 JSON/CSV Import"]
+    CM -->|"Edit Campaign"| FB["FormBuilder.tsx<br/>🔧 Dynamic Forms"]
+
+    subgraph "Shared Utilities"
+        SW["lib/swal.ts<br/>🔔 Dialog Helpers"]
+        TY["types.ts<br/>📐 TypeScript Interfaces"]
+        LO["AAPICOSmartEvalLogo.tsx<br/>🖼️ SVG Logo"]
+    end
+</div></code></pre>
+<h3 id="component-responsibilities">Component Responsibilities</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Size</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[App.tsx](file:///c:/Users/wajeepradit.p/git/Quiz/quizmaster-pro/src/App.tsx)</td>
+<td>810 lines</td>
+<td>Root routing, admin login/logout, tab navigation</td>
+</tr>
+<tr>
+<td>[QuizTaker.tsx](file:///c:/Users/wajeepradit.p/git/Quiz/quizmaster-pro/src/components/QuizTaker.tsx)</td>
+<td>1,302 lines</td>
+<td>Student ESS login, exam taking, timer, auto-submit</td>
+</tr>
+<tr>
+<td>[CampaignManager.tsx](file:///c:/Users/wajeepradit.p/git/Quiz/quizmaster-pro/src/components/CampaignManager.tsx)</td>
+<td>~2,000 lines</td>
+<td>Campaign CRUD, question selection modes</td>
+</tr>
+<tr>
+<td>[CampaignAnalytics.tsx](file:///c:/Users/wajeepradit.p/git/Quiz/quizmaster-pro/src/components/CampaignAnalytics.tsx)</td>
+<td>~2,200 lines</td>
+<td>Live lobby, scoreboard, attendance, statistics</td>
+</tr>
+<tr>
+<td>[QuestionBank.tsx](file:///c:/Users/wajeepradit.p/git/Quiz/quizmaster-pro/src/components/QuestionBank.tsx)</td>
+<td>~1,000 lines</td>
+<td>Question CRUD, packet management, search</td>
+</tr>
+<tr>
+<td>[AdminRolesManager.tsx](file:///c:/Users/wajeepradit.p/git/Quiz/quizmaster-pro/src/components/AdminRolesManager.tsx)</td>
+<td>~900 lines</td>
+<td>System/ESS admin account management</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="9-in-memory-state-%E0%B8%AA%E0%B8%96%E0%B8%B2%E0%B8%99%E0%B8%B0%E0%B9%83%E0%B8%99%E0%B8%AB%E0%B8%99%E0%B9%88%E0%B8%A7%E0%B8%A2%E0%B8%84%E0%B8%A7%E0%B8%B2%E0%B8%A1%E0%B8%88%E0%B8%B3">9. In-Memory State (สถานะในหน่วยความจำ)</h2>
+<p>The following data structures exist only in Node.js memory and are volatile (lost on restart):</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Type</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>campaignDbs</code></td>
+<td><code>Map&lt;string, Database&gt;</code></td>
+<td>Cache of open SQLite connections</td>
+</tr>
+<tr>
+<td><code>liveClients</code></td>
+<td><code>Map&lt;string, Response[]&gt;</code></td>
+<td>Active SSE connections per campaign</td>
+</tr>
+<tr>
+<td><code>activeParticipants</code></td>
+<td><code>Map&lt;string, Map&lt;string, any&gt;&gt;</code></td>
+<td>Currently active exam-takers per campaign</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="10-environment-variables-%E0%B8%95%E0%B8%B1%E0%B8%A7%E0%B9%81%E0%B8%9B%E0%B8%A3%E0%B8%AA%E0%B8%A0%E0%B8%B2%E0%B8%9E%E0%B9%81%E0%B8%A7%E0%B8%94%E0%B8%A5%E0%B9%89%E0%B8%AD%E0%B8%A1">10. Environment Variables (ตัวแปรสภาพแวดล้อม)</h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NODE_ENV</code></td>
+<td>Yes</td>
+<td><code>production</code> disables mock users and Vite HMR</td>
+</tr>
+<tr>
+<td><code>JWT_SECRET</code></td>
+<td>Yes</td>
+<td>Secret key for signing all JWT tokens</td>
+</tr>
+<tr>
+<td><code>GEMINI_API_KEY</code></td>
+<td>Optional</td>
+<td>Google Gemini AI API key</td>
+</tr>
+<tr>
+<td><code>NGROK_AUTHTOKEN</code></td>
+<td>Optional</td>
+<td>ngrok tunnel authentication</td>
+</tr>
+<tr>
+<td><code>PORT</code></td>
+<td>Optional</td>
+<td>Server port (default: 3000)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="11-build--run-commands-%E0%B8%84%E0%B8%B3%E0%B8%AA%E0%B8%B1%E0%B9%88%E0%B8%87-build-%E0%B9%81%E0%B8%A5%E0%B8%B0-run">11. Build &amp; Run Commands (คำสั่ง Build และ Run)</h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Script</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>npm run dev</code></td>
+<td><code>tsx server.ts</code></td>
+<td>Development mode (Vite HMR + Express)</td>
+</tr>
+<tr>
+<td><code>npm run build</code></td>
+<td><code>vite build &amp;&amp; esbuild server.ts ...</code></td>
+<td>Production build</td>
+</tr>
+<tr>
+<td><code>npm run start</code></td>
+<td><code>node dist/server.cjs</code></td>
+<td>Run production server</td>
+</tr>
+<tr>
+<td><code>npm run lint</code></td>
+<td><code>tsc --noEmit</code></td>
+<td>TypeScript type checking</td>
+</tr>
+<tr>
+<td><code>docker-compose up -d --build</code></td>
+<td>—</td>
+<td>Full Docker deployment</td>
+</tr>
+</tbody>
+</table>
+
+</body>
+</html>

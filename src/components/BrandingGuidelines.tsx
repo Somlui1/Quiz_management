@@ -53,7 +53,7 @@ export default function BrandingGuidelines() {
             AAPICO SmartEval
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed">
-            คู่มือการออกแบบภาพลักษณ์ระบบจัดสอบประเมินผลความรู้ดิจิทัล สไตล์ <strong className="text-white font-bold">Neo-Brutalism Tech & Trust</strong> ผสมผสานความมั่นคงระดับองค์กรอุตสาหกรรมรถยนต์และการเขียนโปรแกรมที่เฉียบคมด้วยมุมมอง 90 องศาแบบตัดตรง
+            คู่มือการออกแบบภาพลักษณ์ระบบจัดสอบประเมินผลความรู้ดิจิทัล สไตล์ <strong className="text-white font-bold">Material Design 3 (M3) Enterprise & Trust</strong> ผสมผสานความมั่นคงระดับองค์กรอุตสาหกรรมรถยนต์และการดีไซน์ที่เน้นการใช้งานที่ง่าย รวดเร็ว และลื่นไหลเป็นธรรมชาติ
           </p>
         </div>
       </div>
@@ -76,30 +76,30 @@ export default function BrandingGuidelines() {
               <div className="space-y-2 bg-slate-50 p-4 border border-black rounded-none">
                 <p className="font-black text-slate-900 text-[11px] uppercase tracking-wide flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 bg-aapico-blue" />
-                  เรขาคณิต 90 องศา (STRICTLY SHARP)
+                  ความโค้งมนระดับมน (MATERIAL ROUNDED CORNERS)
                 </p>
                 <p>
-                  กล่องข้อความ ปุ่ม และการ์ดทุกใบห้ามใช้มุมโค้งมนเด็ดขาด (Rounded-none) เพื่อสะท้อนความเฉียบคม มั่นคง และเป็นระเบียบตามรูปแบบของอุตสาหกรรมการผลิตยานยนต์ระดับโลก
+                  กล่องข้อความ ปุ่ม และการ์ดทุกใบได้รับการปรับให้มีความโค้งมนที่สมสัดส่วน (Rounded 12px - 24px) เพื่อสะท้อนถึงนวัตกรรม ความเป็นมิตร และความลื่นไหลระดับสากลของยุคดิจิทัล
                 </p>
               </div>
 
               <div className="space-y-2 bg-slate-50 p-4 border border-black rounded-none">
                 <p className="font-black text-slate-900 text-[11px] uppercase tracking-wide flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 bg-aapico-green" />
-                  เงาตัดแข็งทึบ (HARD OFFSET SHADOWS)
+                  เงายกตัวและระดับความลึก (MATERIAL ELEVATIONS)
                 </p>
                 <p>
-                  หลีกเลี่ยงเงาฟุ้งนุ่มนวลแบบเดิมๆ โดยทดแทนด้วยเงาตัดเหลี่ยมทึบตัน (Offset Solid Shadows) 3px - 5px โดยใช้สีเทาเมทัลลิคเข้ม (#464C59) และสีดำบริสุทธิ์เพื่อความเด่นชัดสูง
+                  เลือกใช้เงาฟุ้งนุ่มนวลอย่างมีลำดับชั้นความลึก (Depth Scale / Elevation Levels) เพื่อแยกแยะเลเยอร์การทำงานของอินเตอร์เฟส ทำให้อ่านข้อมูลสำคัญได้อย่างสบายตาและชัดเจน
                 </p>
               </div>
 
               <div className="space-y-2 bg-slate-50 p-4 border border-black rounded-none col-span-1 md:col-span-2">
                 <p className="font-black text-slate-900 text-[11px] uppercase tracking-wide flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 bg-black" />
-                  เส้นขอบที่ชัดเจน (SOLID BORDER LINES)
+                  เส้นขอบบางเบาและสะอาดตา (SUBTLE OUTLINES & DIVIDERS)
                 </p>
                 <p>
-                  ทุกองค์ประกอบต้องถูกห่อหุ้มด้วยเส้นขอบขนาด 2px หรือ 3px สีดำหรือสีน้ำเงินเข้มอาปิโกเสมอ เพื่อดึงดูดสายตาและยึดโครงร่างโครงสร้างให้สวยงามอย่างมีระบบระเบียบตามสไตล์นีโอบรูทัลลิสต์
+                  เปลี่ยนมาใช้เส้นขอบที่บางเบา 1px สี Slate-200 ที่กลมกลืนกับพื้นหลัง เพื่อลดความหนาอึดอัดของการดีไซน์ดั้งเดิม เพิ่มความเป็นแบรนด์เทคโนโลยีองค์กรระดับสูง
                 </p>
               </div>
             </div>
@@ -228,7 +228,7 @@ export default function BrandingGuidelines() {
               </h3>
             </div>
             <p className="text-xs text-slate-500 font-medium leading-relaxed">
-              การทำงานของปุ่มสไตล์ นีโอบรูทัลลิสต์ แท้ เมื่อเกิดพฤติกรรมสัมผัส (Hover) และกดยุบตัวซ้อนทับเงาพอดี (Active)
+              การทำงานของปุ่มสไตล์ Material Design 3 เมื่อเกิดพฤติกรรมเอาเมาส์ชี้ (Hover Elevation) และกดยุบตัวแบบสัมผัสที่ตอบสนองรวดเร็ว (Active Micro-press)
             </p>
 
             <div className="space-y-6">
@@ -271,8 +271,8 @@ export default function BrandingGuidelines() {
                 <div className="w-full text-center space-y-1.5">
                   <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">โค้ด CSS สำหรับใช้จริง (Tailwind Styles)</span>
                   <div className="p-3 bg-slate-900 text-slate-300 font-mono text-[10px] text-left overflow-x-auto select-all rounded-none border border-black space-y-1 leading-snug">
-                    <p className="text-aapico-green font-bold">// Primary Interactive Button State</p>
-                    <p className="text-white">bg-aapico-green text-black font-black border-3 border-black rounded-none shadow-[4px_4px_0px_0px_#464C59] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[5px_5px_0px_0px_#464C59] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all cursor-pointer</p>
+                    <p className="text-aapico-green font-bold">// Material Design 3 Primary Button Style</p>
+                    <p className="text-white">bg-aapico-green text-black font-bold rounded-full px-6 py-2.5 shadow-sm hover:shadow-md hover:translate-y-[-1px] active:translate-y-[1px] transition-all duration-200 cursor-pointer</p>
                   </div>
                 </div>
 

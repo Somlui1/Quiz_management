@@ -3,6 +3,10 @@ import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import Database from "better-sqlite3";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+
+const JWT_SECRET = process.env.JWT_SECRET || "aapico-smart-eval-secret-key-2026";
 
 // Create database directory if it doesn't exist
 const dataDir = path.join(process.cwd(), "data");
@@ -38,7 +42,7 @@ masterDb.exec(`
     name TEXT NOT NULL,
     department TEXT,
     type TEXT NOT NULL, -- 'system' or 'ess'
-    password TEXT, -- plain text password for system admins
+    password TEXT, -- hashed or plain text password for system admins
     role TEXT NOT NULL DEFAULT 'admin', -- 'super_admin' or 'admin'
     created_at TEXT NOT NULL
   )
@@ -64,18 +68,19 @@ try {
       new Date().toISOString()
     );
 
-    // 2. Pre-create one (1) default System Account with username/password ready for login
+    // 2. Pre-create one (1) default System Account with username/password ready for login (safely hashed with bcrypt)
+    const seededHash = bcrypt.hashSync("admin123", 10);
     insertAdmin.run(
       "sys_admin",
       "admin",
       "System Administrator",
       "IT Administration",
       "system",
-      "admin123",
+      seededHash,
       "super_admin",
       new Date().toISOString()
     );
-    console.log("Seeded default administrator accounts successfully.");
+    console.log("Seeded default administrator accounts successfully with secure hashing.");
   }
 } catch (err) {
   console.error("Error seeding default administrator accounts:", err);
@@ -460,6 +465,53 @@ async function startServer() {
 
   app.use(express.json({ limit: "50mb" }));
 
+  // Middleware to authenticate admin token via JWT
+  const authenticateAdminToken = (req: any, res: any, next: any) => {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({ error: "Access Denied: ไม่พบสิทธิ์การเข้าใช้งาน (Missing Authorization Token)" });
+    }
+
+    try {
+      const verified = jwt.verify(token, JWT_SECRET) as any;
+      req.adminUser = verified;
+      next();
+    } catch (err) {
+      return res.status(403).json({ error: "Access Denied: สิทธิ์การเข้าใช้งานหมดอายุหรือคุณไม่มีสิทธิ์เข้าถึง (Invalid or Expired Token)" });
+    }
+  };
+
+  // Global /api protection middleware
+  app.use("/api", (req, res, next) => {
+    // Exempt login/auth endpoint
+    if (req.path === "/auth") {
+      return next();
+    }
+
+    // Exempt student-facing API endpoints:
+    // - /api/campaigns/:id/student
+    // - /api/campaigns/:id/submit
+    // - /api/campaigns/:id/join
+    // - /api/campaigns/:id/attempts/:identifier
+    // - /api/campaigns/:id/start-attempt
+    const path = req.path; // Note: req.path for app.use("/api") will be relative to /api, so e.g. "/campaigns/midterm/student"
+    const isStudentRoute = 
+      path.endsWith("/student") || 
+      path.endsWith("/submit") || 
+      path.endsWith("/join") || 
+      path.includes("/attempts/") || 
+      path.endsWith("/start-attempt");
+
+    if (isStudentRoute) {
+      return next();
+    }
+
+    // Otherwise protect with admin token
+    authenticateAdminToken(req, res, next);
+  });
+
   // API: Proxy login authentication to ESS Aapico with Employee Pre-Info retrieval
   app.post("/api/auth", async (req, res) => {
     try {
@@ -473,7 +525,15 @@ async function startServer() {
       // Check first if it is a System Admin Account in SQLite
       const sysAdmin = masterDb.prepare("SELECT * FROM admins WHERE LOWER(username_or_id) = ? AND type = 'system'").get(identifier.trim().toLowerCase()) as any;
       if (sysAdmin) {
-        if (password !== sysAdmin.password) {
+        // Handle secure verification of hashed system passwords using bcryptjs, with fallback support for plain text
+        let passwordMatches = false;
+        if (sysAdmin.password && (sysAdmin.password.startsWith("$2a$") || sysAdmin.password.startsWith("$2b$"))) {
+          passwordMatches = bcrypt.compareSync(password, sysAdmin.password);
+        } else {
+          passwordMatches = password === sysAdmin.password;
+        }
+
+        if (!passwordMatches) {
           return res.status(400).json({ error: "Username หรือ Password ไม่ถูกต้อง" });
         }
         
@@ -501,8 +561,19 @@ async function startServer() {
           isAdmin: true
         };
 
+        const token = jwt.sign(
+          {
+            username: sysAdmin.username_or_id,
+            role: sysAdmin.role,
+            type: "system",
+            employeeId: sysAdmin.username_or_id
+          },
+          JWT_SECRET,
+          { expiresIn: "8h" }
+        );
+
         return res.json({
-          jwt: "mock-jwt-token-system-admin-" + sysAdmin.username_or_id,
+          jwt: token,
           user: systemProfile
         });
       }
@@ -510,7 +581,6 @@ async function startServer() {
       // If it's not a system admin, it must be an ESS Account.
       // We will authenticate using mock ESS accounts first or live ESS.
       let authenticatedUser: any = null;
-      let jwtToken = "";
 
       const mockUsers: Record<string, any> = {
         "AH10002898": {
@@ -576,8 +646,10 @@ async function startServer() {
       };
 
       if (mockUsers[upperId] && password === "123456") {
+        if (process.env.NODE_ENV === "production") {
+          return res.status(403).json({ error: "ไม่อนุญาตให้ใช้บัญชีทดสอบในสภาพแวดล้อมจริง (Production Environment) กรุณาเข้าสู่ระบบด้วยบัญชีพนักงานจริงของคุณผ่านระบบ Live ESS API" });
+        }
         authenticatedUser = { ...mockUsers[upperId] };
-        jwtToken = "mock-jwt-token-xyz-123";
       } else {
         // Step 1: Authenticate against /auth/local
         const response = await fetch("https://ess.aapico.com/auth/local", {
@@ -654,7 +726,6 @@ async function startServer() {
           em_no: emp.emp_id,
           companyEmail: ""
         };
-        jwtToken = authData.jwt;
       }
 
       if (!authenticatedUser) {
@@ -673,8 +744,20 @@ async function startServer() {
         authenticatedUser.isAdmin = true;
       }
 
+      // Secure self-signed JWT creation for authenticated ESS admin and user accounts
+      const token = jwt.sign(
+        {
+          username: authenticatedUser.username || authenticatedUser.employeeId || upperId,
+          role: authenticatedUser.role || "admin",
+          type: "ess",
+          employeeId: authenticatedUser.employeeId || authenticatedUser.username || upperId
+        },
+        JWT_SECRET,
+        { expiresIn: "8h" }
+      );
+
       res.json({
-        jwt: jwtToken,
+        jwt: token,
         user: authenticatedUser
       });
     } catch (err: any) {
@@ -718,6 +801,9 @@ async function startServer() {
       };
 
       if (mockUsers[upperId]) {
+        if (process.env.NODE_ENV === "production") {
+          return res.json({ found: false, message: "ไม่อนุญาตให้ดึงข้อมูลบัญชีผู้ใช้จำลองในโหมดใช้งานจริง (Production)" });
+        }
         return res.json({ found: true, user: mockUsers[upperId] });
       }
 
@@ -760,13 +846,15 @@ async function startServer() {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
+      const savedPassword = type === "system" && password ? bcrypt.hashSync(password.trim(), 10) : null;
+
       stmt.run(
         id,
         type === "system" ? cleanId : cleanId.toUpperCase(),
         name.trim(),
         (department || "").trim(),
         type,
-        type === "system" ? password : null,
+        savedPassword,
         role || "admin",
         new Date().toISOString()
       );
@@ -794,10 +882,15 @@ async function startServer() {
         WHERE id = ?
       `);
       
+      let finalPassword = existing.password;
+      if (existing.type === "system" && password && password.trim()) {
+        finalPassword = bcrypt.hashSync(password.trim(), 10);
+      }
+
       stmt.run(
         name ? name.trim() : existing.name,
         department !== undefined ? department.trim() : existing.department,
-        existing.type === "system" && password ? password : existing.password,
+        finalPassword,
         role || existing.role,
         id
       );
@@ -1550,6 +1643,51 @@ async function startServer() {
     }
   });
 
+  // API: Reset database and metrics for a specific campaign (room)
+  app.post("/api/campaigns/:id/reset", (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Validate campaign existence
+      const campaign = masterDb.prepare("SELECT id, name FROM campaigns WHERE id = ?").get(id) as any;
+      if (!campaign) {
+        return res.status(404).json({ error: "ไม่พบห้องสอบที่ต้องการรีเซ็ต" });
+      }
+
+      // Execute reset inside the campaign-specific database
+      try {
+        const db = getCampaignDb(id);
+        db.prepare("DELETE FROM submissions").run();
+        db.prepare("DELETE FROM attempts").run();
+      } catch (dbErr: any) {
+        console.error(`Error deleting rows in campaign ${id} database:`, dbErr);
+        return res.status(500).json({ error: "ล้างข้อมูลในฐานข้อมูลย่อยไม่สำเร็จ: " + dbErr.message });
+      }
+
+      // Clear memory states for this campaign
+      if (activeParticipants.has(id)) {
+        activeParticipants.get(id)?.clear();
+      }
+
+      // Push SSE update to any active Live Lobbies
+      const clients = liveClients.get(id);
+      if (clients && clients.length > 0) {
+        const payloadStr = JSON.stringify({ type: "reset" });
+        clients.forEach(client => {
+          try {
+            client.write(`data: ${payloadStr}\n\n`);
+          } catch (e) {}
+        });
+      }
+
+      console.log(`Campaign room '${id}' reset successful.`);
+      res.json({ success: true, message: "รีเซ็ตข้อมูลรายชื่อและประวัติคะแนนสอบทั้งหมดของห้องนี้สำเร็จแล้ว" });
+    } catch (err: any) {
+      console.error(`Unexpected campaign reset error:`, err);
+      res.status(500).json({ error: err.message || "เกิดข้อผิดพลาดในการรีเซ็ตห้องสอบ" });
+    }
+  });
+
   // API: Delete a campaign and its database
   app.delete("/api/campaigns/:id", (req, res) => {
     try {
@@ -1594,50 +1732,6 @@ async function startServer() {
       res.status(500).json({ error: err.message });
     }
   });
-
-  // API: Reset campaign attempts and submissions
-  app.post("/api/campaigns/:id/reset", (req, res) => {
-    try {
-      const { id } = req.params;
-
-      // Ensure campaign exists in masterDb
-      const checkStmt = masterDb.prepare("SELECT id FROM campaigns WHERE id = ?");
-      if (!checkStmt.get(id)) {
-        return res.status(404).json({ error: "ไม่พบห้องสอบที่ระบุ" });
-      }
-
-      // 1. Clear database attempts and submissions in SQLite database specific to this campaign
-      const db = getCampaignDb(id);
-      db.prepare("DELETE FROM submissions").run();
-      db.prepare("DELETE FROM attempts").run();
-
-      // 2. Reset active participants for this campaign in memory
-      if (activeParticipants.has(id)) {
-        activeParticipants.get(id)!.clear();
-      } else {
-        activeParticipants.set(id, new Map());
-      }
-
-      // 3. Broadcast SSE event to all connected clients
-      const clients = liveClients.get(id);
-      if (clients && clients.length > 0) {
-        const payloadStr = JSON.stringify({ type: "reset" });
-        clients.forEach(client => {
-          try {
-            client.write(`data: ${payloadStr}\n\n`);
-          } catch (e) {
-            // client connection probably dead
-          }
-        });
-      }
-
-      res.json({ success: true, message: "รีเซ็ตข้อมูลและล้างประวัติห้องสอบเรียบร้อยแล้ว" });
-    } catch (err: any) {
-      console.error("Failed to reset campaign:", err);
-      res.status(500).json({ error: err.message || "เกิดข้อผิดพลาดในการรีเซ็ตห้องสอบ" });
-    }
-  });
-
 
   // API: Get single campaign for admin (with answers)
   app.get("/api/campaigns/:id/admin", (req, res) => {

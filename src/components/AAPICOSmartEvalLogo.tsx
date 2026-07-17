@@ -7,93 +7,58 @@ interface LogoProps {
 }
 
 export default function AAPICOSmartEvalLogo({ size = 48, className = "", dark = false }: LogoProps) {
-  // Calculate relative sizes for scaling
-  const scale = size / 48;
-  const shadowOffset = 4 * scale;
-
   // Colors based on specification
   const strokeColor = dark ? "#FFFFFF" : "#1D366D";
   const ecogreenColor = "#2DC84D";
-  const shadowColor = "#464C59";
-
+  
   return (
     <div 
       className={`relative inline-block select-none ${className}`}
       style={{ 
-        width: size + shadowOffset, 
-        height: size + shadowOffset 
+        width: size, 
+        height: size 
       }}
     >
-      {/* 1. Solid hard shadow behind the logo (no blur) */}
-      <div 
-        className="absolute bg-current border-3 border-transparent"
-        style={{
-          width: size,
-          height: size,
-          left: shadowOffset,
-          top: shadowOffset,
-          backgroundColor: shadowColor,
-          zIndex: 1,
-        }}
-      />
-
-      {/* 2. Main Logo Container */}
+      {/* Modern self-contained SVG logo with Material 3 squircle and curved vector details */}
       <svg
         width={size}
         height={size}
         viewBox="0 0 48 48"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="absolute"
-        style={{
-          left: 0,
-          top: 0,
-          zIndex: 2,
-        }}
+        className="w-full h-full transition-transform duration-300 hover:scale-105"
       >
-        {/* Sharp Outer Frame Box (strictly 90-degree corners, no rounded-none) */}
+        {/* Material 3 Rounded Squircle Frame (rx="12" for elegant round corners instead of 90-degree sharp) */}
         <rect 
-          x="1.5" 
-          y="1.5" 
-          width="45" 
-          height="45" 
+          x="2" 
+          y="2" 
+          width="44" 
+          height="44" 
+          rx="12"
           fill={dark ? "#1D366D" : "#FFFFFF"} 
           stroke={strokeColor} 
           strokeWidth="3"
         />
 
-        {/* High-Tech Automotive Precision Gauge Data Bars (strictly sharp 90-degree rectangles) */}
-        {/* Background grid dots for tech texture */}
-        <rect x="8" y="8" width="4" height="4" fill={strokeColor} fillOpacity="0.1" />
-        <rect x="16" y="8" width="4" height="4" fill={strokeColor} fillOpacity="0.1" />
-        <rect x="24" y="8" width="4" height="4" fill={strokeColor} fillOpacity="0.1" />
-        <rect x="32" y="8" width="4" height="4" fill={strokeColor} fillOpacity="0.1" />
-        <rect x="40" y="8" width="4" height="4" fill={strokeColor} fillOpacity="0.1" />
-        
-        <rect x="8" y="16" width="4" height="4" fill={strokeColor} fillOpacity="0.1" />
-        <rect x="40" y="16" width="4" height="4" fill={strokeColor} fillOpacity="0.1" />
+        {/* Sophisticated tech grid background dots with subtle opacity */}
+        <circle cx="10" cy="10" r="1.5" fill={strokeColor} fillOpacity="0.15" />
+        <circle cx="18" cy="10" r="1.5" fill={strokeColor} fillOpacity="0.15" />
+        <circle cx="26" cy="10" r="1.5" fill={strokeColor} fillOpacity="0.15" />
+        <circle cx="34" cy="10" r="1.5" fill={strokeColor} fillOpacity="0.15" />
+        <circle cx="38" cy="18" r="1.5" fill={strokeColor} fillOpacity="0.15" />
+        <circle cx="38" cy="26" r="1.5" fill={strokeColor} fillOpacity="0.15" />
+        <circle cx="38" cy="34" r="1.5" fill={strokeColor} fillOpacity="0.15" />
 
-        <rect x="8" y="24" width="4" height="4" fill={strokeColor} fillOpacity="0.1" />
-        <rect x="40" y="24" width="4" height="4" fill={strokeColor} fillOpacity="0.1" />
-
-        <rect x="8" y="32" width="4" height="4" fill={strokeColor} fillOpacity="0.1" />
-        <rect x="40" y="32" width="4" height="4" fill={strokeColor} fillOpacity="0.1" />
-
-        <rect x="8" y="40" width="4" height="4" fill={strokeColor} fillOpacity="0.1" />
-        <rect x="16" y="40" width="4" height="4" fill={strokeColor} fillOpacity="0.1" />
-        <rect x="24" y="40" width="4" height="4" fill={strokeColor} fillOpacity="0.1" />
-        <rect x="32" y="40" width="4" height="4" fill={strokeColor} fillOpacity="0.1" />
-        <rect x="40" y="40" width="4" height="4" fill={strokeColor} fillOpacity="0.1" />
-
-        {/* Automotive Precision Gauge Bars representing Digital Evaluation Status (30% Accent blocks) */}
+        {/* Rounded Automotive Gauge Bars (represented as smooth Material pills with rx="2") */}
         {/* Low Bar */}
         <rect 
           x="10" 
           y="28" 
           width="4" 
           height="10" 
+          rx="2"
           fill={strokeColor} 
-          fillOpacity="0.3"
+          fillOpacity="0.25"
         />
         {/* Medium Bar */}
         <rect 
@@ -101,6 +66,7 @@ export default function AAPICOSmartEvalLogo({ size = 48, className = "", dark = 
           y="20" 
           width="4" 
           height="18" 
+          rx="2"
           fill={strokeColor} 
           fillOpacity="0.5"
         />
@@ -110,38 +76,30 @@ export default function AAPICOSmartEvalLogo({ size = 48, className = "", dark = 
           y="12" 
           width="4" 
           height="26" 
+          rx="2"
           fill={strokeColor} 
-          fillOpacity="0.7"
+          fillOpacity="0.75"
         />
 
-        {/* Geometric Sharp Checkmark fused with Digital Evaluation pointer (เครื่องหมายถูก) */}
-        {/* Fusing sharp checkmark and indicator gauge arrow */}
+        {/* Rounded, smooth Checkmark (เครื่องหมายถูก) to reflect high-quality digital evaluation */}
         <path 
-          d="M13 22L19 28L37 10L32 5L19 18L18 17" 
+          d="M13 23L19 29L35 13" 
           stroke={strokeColor} 
-          strokeWidth="3" 
-          strokeLinecap="square" 
-          strokeLinejoin="miter"
+          strokeWidth="4" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
         />
-        <polygon 
-          points="13,22 19,28 37,10 33,6 19,20 17,18" 
-          fill={ecogreenColor} 
-          stroke={strokeColor} 
-          strokeWidth="1.5"
+        <path 
+          d="M13 23L19 29L35 13" 
+          stroke={ecogreenColor} 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
         />
 
-        {/* Evaluation Target indicator mark (automotive-style precision pointer) */}
-        <polygon 
-          points="35,32 41,32 38,26" 
-          fill={strokeColor} 
-        />
-        <rect 
-          x="32" 
-          y="34" 
-          width="8" 
-          height="2" 
-          fill={strokeColor} 
-        />
+        {/* Clean Material circular indicator mark */}
+        <circle cx="35" cy="34" r="3" fill={strokeColor} />
+        <line x1="31" y1="38" x2="39" y2="38" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" />
       </svg>
     </div>
   );

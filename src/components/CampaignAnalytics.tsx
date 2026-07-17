@@ -538,10 +538,12 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
 
   const handleResetCampaign = async () => {
     const confirmed = await showConfirm(
-      "ยืนยันการรีเซ็ตข้อมูลห้องสอบ?",
-      "การรีเซ็ตนี้จะลบประวัติการสอบ (attempts) และคะแนนสอบทั้งหมด (submissions) ของห้องสอบนี้อย่างถาวร รวมถึงข้อมูลในสมุดเช็คชื่อกลุ่มย่อย (Focus Group) และเคลียร์หน่วยความจำแคชในเบราว์เซอร์ (localStorage) ของห้องสอบนี้ด้วย ป้องกันการกดพลาดโดยไม่ได้ตั้งใจ"
+      `ยืนยันการรีเซ็ตข้อมูลห้องสอบ?`,
+      `ข้อมูลรายชื่อทั้งหมดในสมุดเช็คชื่อ (Focus Group) และประวัติ/คะแนนการเข้าสอบทั้งหมดของห้องสอบนี้จะถูกล้างข้อมูลจนเป็นศูนย์\n\nคำเตือน: การรีเซ็ตนี้ไม่สามารถกู้คืนได้ คุณต้องการดำเนินการต่อหรือไม่?`
     );
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     try {
       const res = await fetch(`/api/campaigns/${campaign.id}/reset`, { method: "POST" });
@@ -550,27 +552,23 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
         throw new Error(data.error || "เกิดข้อผิดพลาดในการรีเซ็ตห้องสอบ");
       }
       
-      // Clean up local states
+      // Wipe local states
       setSubmissions([]);
       setActiveParticipants([]);
       setAttendanceList([]);
-
-      // Clean up localStorage for this campaign
-      localStorage.removeItem(`campaign_attendance_focus_${campaign.id}`);
-      localStorage.removeItem(`quiz_progress_${campaign.id}`);
-
-      showSuccess("รีเซ็ตห้องสอบสำเร็จ", "ระบบได้ล้างประวัติการสอบ คะแนน และแคชของห้องสอบนี้เรียบร้อยแล้ว");
       
-      if (onRefresh) {
-        onRefresh();
-      } else {
-        refreshAllData();
+      try {
+        localStorage.removeItem(`campaign_attendance_focus_${campaign.id}`);
+      } catch (e) {
+        console.error("Failed to remove local storage focus list key:", e);
       }
+
+      showSuccess("รีเซ็ตห้องสอบสำเร็จ", "ล้างข้อมูลรายชื่อและคะแนนสอบทั้งหมดเรียบร้อยแล้ว");
+      if (onRefresh) onRefresh();
     } catch (err: any) {
-      showError("ไม่สามารถรีเซ็ตได้", err.message);
+      showError("ไม่สามารถรีเซ็ตห้องสอบได้", err.message);
     }
   };
-
 
   useEffect(() => {
     fetchSubmissions();
@@ -589,6 +587,11 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
             if (exists) return prev;
             return [...prev, newPart];
           });
+        } else if (data.type === "reset") {
+          // Dynamic SSE wiping of states
+          setActiveParticipants([]);
+          setSubmissions([]);
+          setAttendanceList([]);
         } else if (data.type === "submission") {
           const newSub: Submission = data.submission;
           
@@ -618,17 +621,7 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
               }
             ]);
           }
-        } else if (data.type === "reset") {
-          // Clear active participants and submissions immediately from the view state
-          setActiveParticipants([]);
-          setSubmissions([]);
-          setToastQueue([]);
-          setActiveToasts([]);
-          setAttendanceList([]);
-          localStorage.removeItem(`campaign_attendance_focus_${campaign.id}`);
-          localStorage.removeItem(`quiz_progress_${campaign.id}`);
         }
-
       } catch (err) {
         console.error("Error handling SSE event message:", err);
       }
@@ -862,8 +855,8 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
           <button
             type="button"
             onClick={handleResetCampaign}
-            className="inline-flex items-center justify-center p-2.5 text-white bg-rose-500 hover:bg-rose-600 rounded-none transition-all cursor-pointer border-3 border-black shadow-[4px_4px_0px_0px_#464C59] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none h-[38px] sm:h-[44px] w-[38px] sm:w-[44px]"
-            title="รีเซ็ตข้อมูลห้องสอบ"
+            className="inline-flex items-center justify-center p-2.5 text-rose-600 hover:bg-rose-50 rounded-none transition-all cursor-pointer border-3 border-black bg-white shadow-[4px_4px_0px_0px_#464C59] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none h-[38px] sm:h-[44px] w-[38px] sm:w-[44px]"
+            title="รีเซ็ตผลสอบและรายชื่อในห้องสอบนี้ทั้งหมด"
           >
             <RotateCcw size={14} />
           </button>

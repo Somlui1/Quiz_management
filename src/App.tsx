@@ -28,6 +28,45 @@ import {
 import { CustomAlertOptions } from "./types";
 import { showSuccess, showError, showWarning } from "./lib/swal";
 
+// Global fetch interceptor to append JWT token automatically to administrative /api requests
+try {
+  const originalFetch = window.fetch;
+  const customFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    
+    // We want to attach the token to all /api/ requests EXCEPT public endpoints like /api/auth or student facing endpoints
+    const isApi = url.includes("/api/");
+    const isPublicAuth = url.includes("/api/auth");
+    const isStudentEndpoint = 
+      url.includes("/student") || 
+      url.includes("/submit") || 
+      url.includes("/join") || 
+      url.includes("/attempts/") || 
+      url.includes("/start-attempt");
+
+    if (isApi && !isPublicAuth && !isStudentEndpoint) {
+      const token = localStorage.getItem("authenticated_admin_token");
+      if (token) {
+        const newInit = { ...(init || {}) };
+        const headers = new Headers(newInit.headers || {});
+        headers.set("Authorization", `Bearer ${token}`);
+        newInit.headers = headers;
+        return originalFetch(input, newInit);
+      }
+    }
+    return originalFetch(input, init);
+  };
+
+  Object.defineProperty(window, "fetch", {
+    value: customFetch,
+    writable: true,
+    configurable: true,
+    enumerable: true
+  });
+} catch (err) {
+  console.warn("Unable to intercept window.fetch globally, proceeding with original fetch reference:", err);
+}
+
 export default function App() {
   // Read query parameters
   const [urlCampaignId, setUrlCampaignId] = useState<string | null>(null);
@@ -151,13 +190,12 @@ export default function App() {
           defaultValue,
           inputValue: defaultValue,
           resolvePromise: (val) => {
-            resolve(val === null ? null : String(val));
+            resolve(val);
           }
         });
       });
     };
 
-    // Override native browser alert with our beautiful custom alert
     window.alert = (msg: string) => {
       window.showCustomAlert?.(msg);
     };
@@ -174,22 +212,10 @@ export default function App() {
       window.alert = originalAlert;
       (window as any).confirm = originalConfirm;
       (window as any).prompt = originalPrompt;
-      delete window.showCustomAlert;
-      delete window.showCustomConfirm;
-      delete window.showCustomPrompt;
     };
   }, []);
 
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get("campaignId");
-    if (id) {
-      setUrlCampaignId(id);
-    }
-  }, []);
-
-  const handleJoinExam = (e: React.FormEvent) => {
+    const handleJoinExam = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputCampaignId.trim()) return;
     
@@ -211,18 +237,12 @@ export default function App() {
       const res = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          identifier: adminId.trim(),
-          password: adminPassword.trim(),
-          isAdminLogin: true
-        })
+        body: JSON.stringify({ identifier: adminId, password: adminPassword })
       });
-
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Username หรือ Password ไม่ถูกต้อง");
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
       }
-
       const data = await res.json();
       const userObj = data.user || data;
       const fetchedName = userObj.name || userObj.firstName || userObj.username || adminId.trim();
@@ -238,6 +258,9 @@ export default function App() {
 
       setAdminUser(profile);
       localStorage.setItem("authenticated_admin_profile", JSON.stringify(profile));
+      if (data.jwt) {
+        localStorage.setItem("authenticated_admin_token", data.jwt);
+      }
       showSuccess("เข้าสู่ระบบผู้ดูแลสำเร็จ", `ยินดีต้อนรับอาจารย์ ${profile.name} เข้าสู่ระบบจัดการข้อสอบ`);
       setAdminId("");
       setAdminPassword("");
@@ -251,10 +274,11 @@ export default function App() {
   const handleAdminLogout = () => {
     setAdminUser(null);
     localStorage.removeItem("authenticated_admin_profile");
+    localStorage.removeItem("authenticated_admin_token");
     showSuccess("ลงชื่อออกสำเร็จ", "คุณได้ลงชื่อออกจากระบบผู้ดูแลเรียบร้อยแล้ว");
   };
 
-  const handleQuitExam = () => {
+    const handleQuitExam = () => {
     // Clear query parameter and return to home page
     window.history.pushState({}, "", window.location.pathname);
     setUrlCampaignId(null);
@@ -381,13 +405,13 @@ export default function App() {
                 <div className="inline-flex items-center justify-center p-3.5 bg-slate-100 text-aapico-blue rounded-none mb-3 border-3 border-black shadow-[3px_3px_0px_0px_#464C59]">
                   <BookOpen size={24} />
                 </div>
-                <h2 className="text-xl font-black text-slate-900 font-sans tracking-tight uppercase">เข้าสู่ห้องสอบ E-Exam</h2>
+                <h2 className="text-xl font-bold text-slate-900 font-sans tracking-tight uppercase">เข้าสู่ห้องสอบ E-Exam</h2>
                 <p className="text-xs text-slate-500 font-medium mt-1">กรอกรหัสห้องสอบควิซที่ได้รับจากอาจารย์ผู้คุมสอบเพื่อเข้าห้องสอบ</p>
               </div>
 
               <form onSubmit={handleJoinExam} className="space-y-5">
                 <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 font-mono">
+                  <label className="block text-xs font-medium text-slate-600 tracking-wide mb-1.5 font-sans">
                     รหัสห้องสอบควิซ (Exam Room ID / Campaign ID)
                   </label>
                   <input
@@ -396,7 +420,7 @@ export default function App() {
                     placeholder="เช่น midterm-math-m1"
                     value={inputCampaignId}
                     onChange={(e) => setInputCampaignId(e.target.value)}
-                    className="w-full px-4 py-3 border-3 border-black rounded-none text-xs font-bold font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-aapico-blue focus:border-aapico-blue"
+                    className="w-full px-4 py-3 border-3 border-black rounded-none text-xs font-normal font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-aapico-blue focus:border-aapico-blue"
                   />
                   <span className="text-[10px] text-slate-400 block mt-2 leading-normal">
                     * รหัสนี้จะได้รับเป็นลิงก์เฉพาะ หรือสแกน QR Code จากอาจารย์ผู้คุมสอบเพื่อทำสอบในกลุ่มฐานข้อมูลแยกเฉพาะ
@@ -405,14 +429,14 @@ export default function App() {
 
                 <button
                   type="submit"
-                  className="w-full inline-flex items-center justify-center gap-1.5 py-3.5 bg-aapico-green hover:bg-emerald-400 text-black rounded-none text-xs font-black uppercase tracking-widest border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer"
+                  className="w-full inline-flex items-center justify-center gap-1.5 py-3.5 bg-aapico-green hover:bg-emerald-400 text-black rounded-none text-xs font-semibold uppercase tracking-wider border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer"
                 >
                   เข้าสู่ระบบเพื่อทำข้อสอบ
                   <ArrowRight size={14} />
                 </button>
 
                 <div className="border-t-3 border-black pt-5 mt-4 text-center">
-                  <p className="text-xs text-slate-500 font-bold mb-2 font-mono uppercase tracking-wider">หรือทดลองจำลองครบ Loop ของระบบทันที:</p>
+                  <p className="text-xs text-slate-500 font-medium mb-2 font-sans tracking-wide">หรือทดลองจำลองครบ Loop ของระบบทันที:</p>
                   <button
                     type="button"
                     onClick={() => {
@@ -420,7 +444,7 @@ export default function App() {
                       window.history.pushState({}, "", "?campaignId=demo-quiz");
                       setUrlCampaignId("demo-quiz");
                     }}
-                    className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 bg-aapico-blue hover:bg-indigo-900 text-white rounded-none text-[11px] font-black uppercase tracking-wider border-3 border-black shadow-[3px_3px_0px_0px_#464C59] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all cursor-pointer"
+                    className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 bg-aapico-blue hover:bg-indigo-900 text-white rounded-none text-[11px] font-semibold uppercase tracking-wider border-3 border-black shadow-[3px_3px_0px_0px_#464C59] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all cursor-pointer"
                   >
                     เข้าสู่ห้องสอบสาธิต (Demo Exam Room ID: demo-quiz)
                   </button>
@@ -432,7 +456,7 @@ export default function App() {
           <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center py-6 w-full animate-in fade-in duration-350">
             {/* Left promo graphics column */}
             <div className="lg:col-span-7 space-y-6 text-center lg:text-left pr-0 lg:pr-6">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#eef2f6] border-2 border-black rounded-none text-[10px] font-black text-aapico-blue uppercase tracking-widest font-mono">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#eef2f6] border-2 border-black rounded-none text-[10px] font-semibold text-aapico-blue uppercase tracking-widest font-mono">
                 SECURE ADMIN PANEL AUTHORIZATION
               </div>
               <h1 className="text-3xl sm:text-5xl font-black text-slate-950 tracking-tighter leading-none font-sans uppercase text-left">
@@ -449,21 +473,21 @@ export default function App() {
                   <div className="p-2 bg-slate-100 border border-black rounded-none w-9 h-9 flex items-center justify-center">
                     <Database size={16} className="text-aapico-blue" />
                   </div>
-                  <p className="text-xs font-black text-slate-950 uppercase tracking-tight">ระบบคลังข้อสอบ</p>
+                  <p className="text-xs font-semibold text-slate-900 uppercase tracking-tight">ระบบคลังข้อสอบ</p>
                   <p className="text-[10px] text-slate-500 leading-normal font-medium">สร้าง จัดการ และจัดหมวดหมู่คลังคำถามได้ไม่จำกัดจำนวน</p>
                 </div>
                 <div className="p-5 bg-white border-2 border-black rounded-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] space-y-2 text-left">
                   <div className="p-2 bg-slate-100 border border-black rounded-none w-9 h-9 flex items-center justify-center">
                     <Users size={16} className="text-aapico-blue" />
                   </div>
-                  <p className="text-xs font-black text-slate-950 uppercase tracking-tight">จัดการห้องสอบ</p>
+                  <p className="text-xs font-semibold text-slate-900 uppercase tracking-tight">จัดการห้องสอบ</p>
                   <p className="text-[10px] text-slate-500 leading-normal font-medium">คุมสอบ ติดตามความคืบหน้า และประมวลผลคะแนนอัตโนมัติ</p>
                 </div>
                 <div className="p-5 bg-white border-2 border-black rounded-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] space-y-2 text-left">
                   <div className="p-2 bg-slate-100 border border-black rounded-none w-9 h-9 flex items-center justify-center">
                     <ShieldCheck size={16} className="text-aapico-blue" />
                   </div>
-                  <p className="text-xs font-black text-slate-950 uppercase tracking-tight">ความปลอดภัยสูง</p>
+                  <p className="text-xs font-semibold text-slate-900 uppercase tracking-tight">ความปลอดภัยสูง</p>
                   <p className="text-[10px] text-slate-500 leading-normal font-medium">ควบคุมการสลับข้อสอบ และระบบยืนยันตัวตนระดับองค์กร</p>
                 </div>
               </div>
@@ -475,13 +499,13 @@ export default function App() {
                 <div className="inline-flex items-center justify-center p-3.5 bg-aapico-blue text-white rounded-none mb-3 border-3 border-black shadow-[3px_3px_0px_0px_#464C59]">
                   <ShieldCheck size={24} />
                 </div>
-                <h2 className="text-xl font-black text-slate-900 font-sans tracking-tight uppercase text-center">ลงชื่อเข้าสู่ระบบผู้ดูแล / อาจารย์</h2>
+                <h2 className="text-xl font-bold text-slate-900 font-sans tracking-tight uppercase text-center">ลงชื่อเข้าสู่ระบบผู้ดูแล / อาจารย์</h2>
                 <p className="text-xs text-slate-500 font-medium mt-1 text-center">ยืนยันตัวตนผ่านระบบตรวจสอบประวัติการทำงาน ESS (Employee Self-Service)</p>
               </div>
 
               <form onSubmit={handleAdminLogin} className="space-y-5 text-left">
                 <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 font-mono">
+                  <label className="block text-xs font-medium text-slate-600 tracking-wide mb-1.5 font-sans">
                     รหัสพนักงาน (EM ID / Username)
                   </label>
                   <div className="relative">
@@ -494,13 +518,13 @@ export default function App() {
                       placeholder="เช่น AH10002898"
                       value={adminId}
                       onChange={(e) => setAdminId(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2.5 border-3 border-black rounded-none text-xs font-bold font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-aapico-blue"
+                      className="w-full pl-9 pr-4 py-2.5 border-3 border-black rounded-none text-xs font-normal font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-aapico-blue"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 font-mono">
+                  <label className="block text-xs font-medium text-slate-600 tracking-wide mb-1.5 font-sans">
                     รหัสผ่าน (Password)
                   </label>
                   <div className="relative">
@@ -513,7 +537,7 @@ export default function App() {
                       placeholder="รหัสผ่านเข้าสู่ระบบ"
                       value={adminPassword}
                       onChange={(e) => setAdminPassword(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2.5 border-3 border-black rounded-none text-xs font-bold font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-aapico-blue"
+                      className="w-full pl-9 pr-4 py-2.5 border-3 border-black rounded-none text-xs font-normal font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-aapico-blue"
                     />
                   </div>
                 </div>
@@ -521,7 +545,7 @@ export default function App() {
                 <button
                   type="submit"
                   disabled={adminLoginLoading}
-                  className="w-full inline-flex items-center justify-center gap-1.5 py-3.5 bg-aapico-blue text-white hover:bg-[#132448] disabled:bg-slate-200 disabled:text-slate-400 rounded-none text-xs font-black uppercase tracking-widest border-3 border-black shadow-[4px_4px_0px_0px_#464C59] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer font-sans"
+                  className="w-full inline-flex items-center justify-center gap-1.5 py-3.5 bg-aapico-blue text-white hover:bg-[#132448] disabled:bg-slate-200 disabled:text-slate-400 rounded-none text-xs font-semibold uppercase tracking-wider border-3 border-black shadow-[4px_4px_0px_0px_#464C59] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer font-sans"
                 >
                   {adminLoginLoading ? (
                     <span>กำลังตรวจสอบ...</span>

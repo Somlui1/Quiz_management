@@ -548,10 +548,13 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
   // Loading indicator on very first fetch
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh]">
-        <div className="w-8/12 max-w-sm p-6 bg-white border-3 border-black rounded-none shadow-[4px_4px_0px_0px_#464C59] text-center">
-          <div className="w-8 h-8 border-4 border-[#1D366D] border-t-transparent rounded-none animate-spin mb-4 mx-auto" />
-          <p className="text-slate-900 font-black font-mono text-xs uppercase tracking-wider">กำลังเปิดระบบสอบ...</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] bg-slate-50/30">
+        <div className="w-full max-w-sm p-8 bg-white border border-slate-100 rounded-2xl shadow-lg text-center space-y-4 animate-in fade-in duration-300">
+          <div className="w-12 h-12 border-4 border-[#1D366D] border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-slate-800 font-sans tracking-tight">กำลังจัดเตรียมระบบสอบ...</h3>
+            <p className="text-xs text-slate-400 font-sans leading-relaxed">ระบบความปลอดภัยกำลังเชื่อมโยงข้อมูลรายชื่อพนักงาน</p>
+          </div>
         </div>
       </div>
     );
@@ -560,15 +563,21 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
   // Error feedback (including inactive/scheduled close/not found)
   if (error || !campaign) {
     return (
-      <div className="max-w-md mx-auto my-12 p-6 bg-white border-3 border-black rounded-none shadow-[6px_6px_0px_0px_#464C59] text-center">
-        <AlertCircle className="text-rose-600 mx-auto mb-3" size={44} />
-        <h2 className="text-lg font-black text-slate-900 font-sans uppercase">ไม่สามารถทำข้อสอบได้</h2>
-        <p className="text-xs text-rose-700 font-bold bg-rose-50 border-3 border-black rounded-none p-3.5 mt-3 font-mono">
-          {error || "ไม่พบห้องสอบข้อสอบนี้ในระบบ"}
-        </p>
-        <p className="text-xs text-slate-500 mt-4 leading-relaxed font-medium">
-          หากท่านสแกน QR Code เข้ามา อาจเกิดจากการปิดห้องสอบโดยอาจารย์ผู้สอน หรือหมดช่วงเวลาการเข้าสอบที่กำหนดไว้
-        </p>
+      <div className="max-w-md mx-auto my-12 p-8 bg-white border border-slate-100 rounded-2xl shadow-lg text-center space-y-5 animate-in fade-in duration-300">
+        <div className="w-14 h-14 bg-rose-50 rounded-full flex items-center justify-center mx-auto text-rose-500">
+          <AlertCircle size={28} />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-lg font-bold text-slate-800 font-sans">ไม่สามารถเข้าทำข้อสอบได้</h2>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            ห้องสอบนี้อาจถูกปิดโดยผู้ควบคุมระบบ หรือหมดช่วงเวลาเปิดสอบที่กำหนดไว้ในแผนงานองค์กร
+          </p>
+        </div>
+        <div className="p-4 bg-rose-50/50 rounded-xl border border-rose-100/50">
+          <p className="text-xs text-rose-700 font-mono font-semibold break-all leading-relaxed">
+            {error || "ไม่พบรหัสห้องสอบนี้ในฐานข้อมูล"}
+          </p>
+        </div>
       </div>
     );
   }
@@ -579,22 +588,26 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
 
     if (displayMode === "hidden") {
       return (
-        <div className="max-w-md mx-auto my-12 p-8 bg-white border-3 border-black rounded-none shadow-[6px_6px_0px_0px_#464C59] text-center animate-in fade-in duration-300">
-          <CheckCircle className="text-[#2DC84D] mx-auto mb-4" size={64} />
-          <h2 className="text-xl font-black text-slate-900 font-sans uppercase">บันทึกคำตอบข้อสอบสำเร็จแล้ว</h2>
-          <p className="text-xs text-slate-600 mt-2 font-medium bg-slate-50 border-3 border-black p-3.5 rounded-none">
-            ระบบได้รับการส่งคำตอบวิชา <span className="font-bold text-slate-900">{campaign.name}</span> ของคุณเรียบร้อยแล้ว ขอบคุณสำหรับการทำข้อสอบ
-          </p>
-          <div className="mt-6 p-4 bg-blue-50 border-3 border-black rounded-none text-[10px] text-slate-600 font-medium font-sans leading-relaxed text-left">
-            <strong>หมายเหตุเพิ่มเติมจากทางระบบ:</strong> ตามนโยบายการจัดสอบของห้องสอบนี้ ผลคะแนนสอบรายบุคคลจะไม่ถูกแสดงผลแก่พนักงานทันทีหลังจากสอบเสร็จสิ้น ข้อมูลทั้งหมดจะถูกส่งตรงไปยังฝ่ายบุคคลหรือผู้ควบคุมการสอนเพื่อพิจารณาประเมินผลอย่างเป็นทางการ
+        <div className="max-w-md mx-auto my-12 p-8 bg-white border border-slate-100 rounded-2xl shadow-lg text-center space-y-6 animate-in fade-in duration-300">
+          <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto text-emerald-600">
+            <CheckCircle size={36} />
           </div>
-          <div className="mt-6">
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-slate-800 font-sans tracking-tight">บันทึกคำตอบสำเร็จแล้ว</h2>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              ระบบได้รับการบันทึกคำตอบวิชา <span className="font-semibold text-slate-800">"{campaign.name}"</span> ของคุณเรียบร้อยแล้ว
+            </p>
+          </div>
+          <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100/50 text-[11px] text-slate-600 font-sans leading-relaxed text-left">
+            <strong>หมายเหตุ:</strong> ตามนโยบายการจัดสอบของฝ่ายประเมินผล ผลคะแนนสอบรายบุคคลของคุณจะไม่แสดงบนหน้านี้ทันที แต่จะนำส่งตรงไปยังฝ่ายทรัพยากรบุคคลหรือผู้บังคับบัญชาเพื่อพิจารณาอย่างเป็นทางการ
+          </div>
+          <div className="pt-2">
             <button
               onClick={handleLogout}
-              className="w-full py-3 bg-[#1D366D] hover:bg-indigo-950 text-white border-3 border-black rounded-none text-xs font-black uppercase font-sans tracking-wider transition-all shadow-[4px_4px_0px_0px_#464C59] active:translate-y-[2px] active:shadow-none cursor-pointer inline-flex items-center justify-center gap-2"
+              className="w-full py-3 bg-[#1D366D] hover:bg-indigo-950 text-white rounded-full text-xs font-bold tracking-wide transition-all duration-200 shadow-sm active:translate-y-[1px] cursor-pointer inline-flex items-center justify-center gap-2"
             >
               <LogOut size={14} />
-              เสร็จสิ้นและออกจากระบบสอบ (Logout)
+              เสร็จสิ้นและออกจากระบบสอบ
             </button>
           </div>
         </div>
@@ -602,97 +615,111 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
     }
 
     return (
-      <div className="max-w-2xl mx-auto my-6 space-y-6 text-left">
+      <div className="max-w-2xl mx-auto my-8 space-y-6 text-left animate-in fade-in duration-300">
         {/* Pass / Fail Banner Card */}
         <div
-          className={`p-8 border-3 border-black rounded-none text-center relative overflow-hidden shadow-[6px_6px_0px_0px_#464C59] ${
+          className={`p-8 rounded-2xl text-center relative overflow-hidden border shadow-md ${
             result.passed
-              ? "bg-[#2DC84D] text-black"
-              : "bg-rose-300 text-slate-950"
+              ? "bg-emerald-50 border-emerald-100 text-emerald-950"
+              : "bg-rose-50 border-rose-100 text-rose-950"
           }`}
         >
-          {result.passed ? (
-            <CheckCircle className="text-black mx-auto mb-3 animate-bounce" size={54} />
-          ) : (
-            <XCircle className="text-slate-950 mx-auto mb-3" size={54} />
-          )}
+          <div className="space-y-3">
+            {result.passed ? (
+              <div className="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto shadow-sm">
+                <CheckCircle size={28} />
+              </div>
+            ) : (
+              <div className="w-14 h-14 bg-rose-100 text-rose-700 rounded-full flex items-center justify-center mx-auto shadow-sm">
+                <XCircle size={28} />
+              </div>
+            )}
 
-          <h2 className="text-2xl font-black font-sans tracking-tight uppercase text-black">
-            {result.passed ? "ยินดีด้วย คุณสอบผ่านเกณฑ์!" : "เสียใจด้วย คุณไม่ผ่านเกณฑ์"}
-          </h2>
-          <p className="text-xs text-slate-900 font-bold mt-1">
-            เกณฑ์คะแนนขั้นต่ำผ่าน: <span className="underline decoration-2 font-black">{result.passingCriteria}%</span>
-          </p>
+            <div className="space-y-1">
+              <h2 className="text-xl font-bold font-sans tracking-tight">
+                {result.passed ? "ยินดีด้วย คุณสอบผ่านเกณฑ์ประเมิน!" : "เสียใจด้วย คะแนนของคุณยังไม่ผ่านเกณฑ์"}
+              </h2>
+              <p className="text-xs text-slate-500 font-medium">
+                เกณฑ์ผ่านประเมินขั้นต่ำ: <span className="font-semibold text-slate-700">{result.passingCriteria}%</span>
+              </p>
+            </div>
 
-          <div className="mt-6 inline-flex items-baseline gap-2 p-4 bg-white border-3 border-black rounded-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
-            <span className="text-[10px] uppercase font-black text-slate-500 font-mono tracking-widest">เปอร์เซ็นต์คะแนน:</span>
-            <span className={`text-3xl font-black font-mono ${result.passed ? "text-emerald-600" : "text-rose-600"}`}>
-              {result.scorePercent}%
-            </span>
-            <span className="text-xs text-slate-400 font-mono font-bold">
-              ({result.correctCount} / {result.totalQuestions} ข้อ)
-            </span>
+            <div className="pt-4">
+              <div className="inline-flex items-center gap-3 px-5 py-3 bg-white border border-slate-100 rounded-2xl shadow-sm">
+                <span className="text-[10px] uppercase font-bold text-slate-400 font-mono tracking-wider">เปอร์เซ็นต์คะแนน</span>
+                <span className={`text-2xl font-bold font-mono ${result.passed ? "text-emerald-600" : "text-rose-600"}`}>
+                  {result.scorePercent}%
+                </span>
+                <span className="text-xs text-slate-400 font-semibold border-l border-slate-200 pl-3">
+                  (ถูกต้อง {result.correctCount} จาก {result.totalQuestions} ข้อ)
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Detailed Instant Checker Breakdown (ONLY if Mode is "full") */}
         {displayMode === "full" ? (
-          <div className="bg-white border-3 border-black rounded-none p-6 shadow-[4px_4px_0px_0px_#464C59] space-y-4">
-            <div className="border-b-3 border-slate-100 pb-3">
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-1.5 font-mono">
-                <FileText size={16} className="text-[#1D366D]" />
-                เฉลยพร้อมอธิบายคำตอบ (Instant Checker & Correction)
+          <div className="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+            <div className="border-b border-slate-100 pb-4">
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide flex items-center gap-2 font-sans">
+                <FileText size={18} className="text-[#1D366D]" />
+                สรุปเฉลยและการประเมินรายข้อ (Instant Analysis)
               </h3>
-              <p className="text-xs text-slate-400 font-medium">ตรวจสอบจุดที่ผิดพลาดเพื่อเป็นความรู้ในการสอบครั้งถัดไป</p>
+              <p className="text-xs text-slate-400 leading-relaxed mt-1">
+                โปรดทบทวนเฉลยอย่างรอบคอบเพื่อเพิ่มความรู้ความเข้าใจสำหรับประยุกต์ใช้ในการทำงานจริง
+              </p>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-5">
               {result.answersEvaluation.map((ev, idx) => (
                 <div
                   key={ev.questionId}
-                  className={`p-4 rounded-none border-3 border-black flex flex-col sm:flex-row sm:items-start justify-between gap-4 shadow-[3px_3px_0px_0px_#464C59] ${
+                  className={`p-5 rounded-xl border flex flex-col md:flex-row md:items-start justify-between gap-4 transition-all duration-200 ${
                     ev.isCorrect
-                      ? "bg-slate-50"
-                      : "bg-rose-50/20"
+                      ? "bg-slate-50/50 border-slate-100"
+                      : "bg-rose-50/20 border-rose-100/30"
                   }`}
                 >
-                  <div className="space-y-2">
-                    <div className="flex items-start gap-2">
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-none bg-slate-900 text-white text-xs font-black font-mono shrink-0 mt-0.5 border-2 border-black">
+                  <div className="space-y-3 flex-1">
+                    <div className="flex items-start gap-3">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold font-mono shrink-0 mt-0.5">
                         {idx + 1}
                       </span>
-                      <p className="font-bold text-slate-900 text-xs leading-relaxed">{ev.questionText}</p>
+                      <p className="font-bold text-slate-800 text-xs sm:text-sm leading-relaxed">{ev.questionText}</p>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-sans pl-8">
-                      <div className="p-2.5 bg-white border-2 border-black rounded-none text-slate-700 font-medium">
-                        คำตอบที่คุณเลือก: <strong className={ev.isCorrect ? "text-[#2DC84D]" : "text-rose-600"}>{ev.selectedAnswer || "- ไม่ได้เลือกตอบ -"}</strong>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pl-9">
+                      <div className="p-3 bg-white border border-slate-100 rounded-xl space-y-1">
+                        <span className="text-[10px] font-bold text-slate-400 block">คำตอบของคุณ:</span>
+                        <p className={`font-bold ${ev.isCorrect ? "text-emerald-600" : "text-rose-600"}`}>
+                          {ev.selectedAnswer || "- ไม่ได้เลือกตอบ -"}
+                        </p>
                       </div>
                       {!ev.isCorrect && (
-                        <div className="p-2.5 bg-emerald-50 border-2 border-black rounded-none text-slate-700 font-medium">
-                          คำตอบที่ถูกต้อง: <strong className="text-emerald-700">{ev.correctAnswer}</strong>
+                        <div className="p-3 bg-emerald-50/40 border border-emerald-100/50 rounded-xl space-y-1">
+                          <span className="text-[10px] font-bold text-emerald-600 block">คำตอบที่ถูกต้อง:</span>
+                          <p className="font-bold text-emerald-700">{ev.correctAnswer}</p>
                         </div>
                       )}
                     </div>
 
                     {ev.explanation && (
-                      <div className="mt-2 ml-8 p-3 bg-blue-50 border-2 border-black rounded-none text-xs text-slate-700 font-sans leading-relaxed">
-                        <span className="font-black text-slate-900 flex items-center gap-1 mb-0.5">
-                          คำอธิบายเพิ่มเติม:
-                        </span>
-                        <p className="font-semibold text-slate-600">{ev.explanation}</p>
+                      <div className="mt-2 ml-9 p-3 bg-blue-50/40 border border-blue-100/50 rounded-xl text-xs text-slate-600 leading-relaxed">
+                        <span className="font-bold text-slate-800 block mb-1">คำอธิบายเพิ่มเติม:</span>
+                        <p className="text-slate-500 font-medium">{ev.explanation}</p>
                       </div>
                     )}
                   </div>
 
-                  <div className="shrink-0 pl-8 sm:pl-0">
+                  <div className="shrink-0 pl-9 md:pl-0">
                     {ev.isCorrect ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-none bg-[#2DC84D] text-black text-xs font-black border-2 border-black font-sans shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-100">
                         <CheckCircle size={14} />
                         ถูกต้อง
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-none bg-rose-300 text-slate-950 text-xs font-black border-2 border-black font-sans shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-rose-50 text-rose-700 text-xs font-semibold border border-rose-100">
                         <XCircle size={14} />
                         ผิดพลาด
                       </span>
@@ -703,12 +730,16 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
             </div>
           </div>
         ) : (
-          <div className="bg-white border-3 border-black rounded-none p-8 shadow-[4px_4px_0px_0px_#464C59] text-center space-y-3">
-            <Lock size={32} className="mx-auto text-slate-500 animate-pulse" />
-            <h3 className="text-sm font-black text-slate-900 uppercase font-sans">สงวนสิทธิ์การเข้าถึงเฉลยและคำตอบ</h3>
-            <p className="text-xs text-slate-500 max-w-md mx-auto font-medium leading-relaxed">
-              สอดคล้องกับการตั้งค่าแบบประเมินสำหรับพนักงานสอบ: คะแนนและเฉลยจะไม่ถูกเปิดเผยแบบระบุรายละเอียดในโหมดนี้ เพื่อความถูกต้องของกระบวนการวัดผลขององค์กร
-            </p>
+          <div className="bg-white border border-slate-100 rounded-2xl p-8 shadow-sm text-center space-y-4">
+            <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-400 animate-pulse">
+              <Lock size={20} />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-sm font-bold text-slate-800 font-sans uppercase">ข้อมูลเฉลยถูกจำกัดการแสดงผล</h3>
+              <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+                เนื่องจากเป็นการสอบวัดระดับอย่างเป็นทางการ การเฉลยคำตอบรายข้อจะไม่ถูกเปิดเผยแก่พนักงานโดยตรงเพื่อป้องกันความน่าเชื่อถือของเนื้อหาสอบวิชานี้
+              </p>
+            </div>
           </div>
         )}
         
@@ -716,10 +747,10 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
         <div className="pt-4 text-center">
           <button
             onClick={handleLogout}
-            className="px-6 py-3 bg-[#1D366D] hover:bg-indigo-950 text-white border-3 border-black rounded-none text-xs font-black uppercase font-sans tracking-wider transition-all shadow-[4px_4px_0px_0px_#464C59] active:translate-y-[2px] active:shadow-none cursor-pointer inline-flex items-center gap-2"
+            className="px-8 py-3 bg-[#1D366D] hover:bg-indigo-950 text-white rounded-full text-xs font-bold tracking-wider transition-all duration-200 shadow-sm hover:shadow-md active:translate-y-[1px] cursor-pointer inline-flex items-center gap-2"
           >
             <LogOut size={14} />
-            เสร็จสิ้นและออกจากระบบสอบ (Logout)
+            เสร็จสิ้นและออกจากระบบสอบ
           </button>
         </div>
       </div>
@@ -729,70 +760,74 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
   // B1. Secure Authentication Login Screen
   if (!isAuthenticated) {
     return (
-      <div className="max-w-md mx-auto my-8 bg-white border-3 border-black rounded-none shadow-[6px_6px_0px_0px_#464C59] overflow-hidden animate-in fade-in duration-300 text-left">
+      <div className="max-w-md mx-auto my-12 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden animate-in fade-in duration-300 text-left">
         {/* Banner with Key icon */}
-        <div className="bg-[#1D366D] p-6 text-white text-center border-b-3 border-black">
-          <KeyRound className="mx-auto text-white mb-2" size={32} />
-          <h2 className="text-base font-black font-sans tracking-tight uppercase">เข้าสู่ระบบสอบพนักงาน (ESS Login)</h2>
-          <p className="text-[10px] text-slate-300 mt-1 font-bold font-mono">ห้องสอบควิซ: {campaign.name}</p>
+        <div className="bg-[#1D366D] p-8 text-white text-center space-y-2">
+          <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mx-auto">
+            <KeyRound className="text-white" size={24} />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-lg font-bold font-sans tracking-tight">เข้าสู่ระบบประเมินพนักงาน (ESS Login)</h2>
+            <p className="text-[11px] text-slate-300 font-semibold">ห้องสอบ: {campaign.name}</p>
+          </div>
         </div>
 
         {/* Login form container */}
-        <form onSubmit={handleLoginSubmit} className="p-6 space-y-4">
-          <div className="space-y-3">
+        <form onSubmit={handleLoginSubmit} className="p-8 space-y-6">
+          <div className="space-y-4">
             {/* Username/Identifier Input */}
-            <div className="space-y-1">
-              <label className="block text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1 font-mono">
-                <User size={12} className="text-slate-900" /> รหัสพนักงาน (EM No)
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-600 tracking-wide flex items-center gap-1.5 font-sans">
+                <User size={14} className="text-slate-400" /> รหัสพนักงาน (EM No)
               </label>
               <input
                 type="text"
                 required
-                placeholder="เช่น AH1000xxxx"
+                placeholder="กรอกรหัสพนักงานของคุณ เช่น AH1000xxxx"
                 value={userIdentifier}
                 onChange={(e) => setUserIdentifier(e.target.value)}
-                className="w-full px-3.5 py-2.5 border-3 border-black focus:ring-2 focus:ring-indigo-500 rounded-none text-xs font-mono text-slate-900 font-bold focus:outline-none bg-white placeholder-slate-400"
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs font-mono text-slate-800 font-semibold focus:outline-none bg-slate-50/50"
               />
             </div>
 
             {/* Password Input */}
-            <div className="space-y-1">
-              <label className="block text-[11px] font-black text-slate-600 uppercase tracking-wider flex items-center gap-1 font-mono">
-                <Lock size={12} className="text-slate-900" /> รหัสผ่าน (Password)
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-600 tracking-wide flex items-center gap-1.5 font-sans">
+                <Lock size={14} className="text-slate-400" /> รหัสผ่าน (Password)
               </label>
               <input
                 type="password"
                 required
-                placeholder="กรอกรหัสผ่านของคุณ"
+                placeholder="กรอกรหัสผ่านเข้าใช้งานระบบ"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3.5 py-2.5 border-3 border-black focus:ring-2 focus:ring-indigo-500 rounded-none text-xs font-mono text-slate-900 font-bold focus:outline-none bg-white placeholder-slate-400"
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs font-mono text-slate-800 font-semibold focus:outline-none bg-slate-50/50"
               />
             </div>
           </div>
 
-          <div className="bg-slate-50 border-3 border-black p-3.5 rounded-none flex items-start gap-2.5 text-xs text-slate-600 font-medium">
-            <Fingerprint size={16} className="text-slate-900 shrink-0 mt-0.5" />
-            <div className="text-[10px] leading-relaxed">
-              <p className="font-bold text-slate-800">ระบบตรวจสอบสิทธิ์ผ่าน ESS Platform</p>
-              <p className="text-slate-500 mt-0.5">การระบุข้อมูลประจำตัวที่ถูกต้องจะดึงข้อมูลประวัติแผนก อีเมล และชื่อจริงจากฐานข้อมูลเพื่อความปลอดภัยสูงสุดและป้องกันการทำแทน</p>
+          <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl flex items-start gap-3 text-xs text-slate-500 leading-relaxed">
+            <Fingerprint size={18} className="text-slate-400 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <p className="font-semibold text-slate-700">ระบบตรวจสอบสิทธิ์ผ่านฐานข้อมูลส่วนกลาง</p>
+              <p className="text-[11px]">เพื่อความโปร่งใสและถูกต้อง ข้อมูลแผนก สังกัด และอีเมลของคุณจะถูกเชื่อมโยงโดยอัตโนมัติเมื่อระบุตัวตนถูกต้อง</p>
             </div>
           </div>
 
           <button
             type="submit"
             disabled={authLoading}
-            className="w-full py-3 bg-[#2DC84D] hover:bg-emerald-500 text-black border-3 border-black rounded-none text-xs font-black uppercase tracking-wider shadow-[4px_4px_0px_0px_#464C59] active:translate-y-[2px] active:shadow-none disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center gap-2 font-sans"
+            className="w-full py-3 bg-[#1D366D] hover:bg-indigo-950 text-white rounded-full text-xs font-bold tracking-wider shadow-sm hover:shadow-md disabled:opacity-50 transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 font-sans"
           >
             {authLoading ? (
               <>
-                <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-none animate-spin" />
-                กำลังตรวจสอบสิทธิ์...
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                กำลังยืนยันตัวตน...
               </>
             ) : (
               <>
-                <ShieldCheck size={14} />
-                ตรวจสอบข้อมูลผู้ใช้จริง
+                <ShieldCheck size={16} />
+                เข้าสู่ระบบประเมินผล
               </>
             )}
           </button>
@@ -804,74 +839,70 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
   // B1.5 Instruction Page (User Workflow Step 1)
   if (!hasAcceptedInstruction) {
     return (
-      <div className="max-w-xl mx-auto my-8 bg-white border-3 border-black rounded-none shadow-[6px_6px_0px_0px_#464C59] overflow-hidden animate-in fade-in duration-300 text-left">
-        <div className="bg-[#1D366D] p-6 text-white text-center border-b-3 border-black">
-          <FileText className="mx-auto text-white mb-2" size={32} />
-          <h2 className="text-base font-black font-sans tracking-tight uppercase">หน้าชี้แจงรายละเอียดการทดสอบ (Instruction Page)</h2>
-          <p className="text-[10px] text-slate-300 mt-1 font-bold font-mono">ห้องสอบควิซ: {campaign.name}</p>
+      <div className="max-w-xl mx-auto my-12 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden animate-in fade-in duration-300 text-left">
+        <div className="bg-[#1D366D] p-8 text-white text-center space-y-2">
+          <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mx-auto">
+            <FileText className="text-white" size={24} />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-lg font-bold font-sans tracking-tight">คำชี้แจงและสิทธิ์การเข้าทำแบบประเมิน</h2>
+            <p className="text-[11px] text-slate-300 font-semibold">วิชาทดสอบ: {campaign.name}</p>
+          </div>
         </div>
 
-        <div className="p-6 space-y-5">
-          <div className="p-4 bg-blue-50 border-3 border-black rounded-none space-y-2">
-            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1">
+        <div className="p-8 space-y-6">
+          <div className="p-5 bg-blue-50/50 rounded-xl border border-blue-100/50 space-y-2">
+            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
               สวัสดีครับ คุณ {userName || "ผู้สอบ"}
             </h3>
-            <p className="text-xs text-slate-700 leading-relaxed font-semibold">
-              ยินดีต้อนรับเข้าสู่ระบบประเมินความรู้พนักงาน (ESS Platform) สำหรับหัวข้อการทดสอบ <span className="text-[#1D366D] font-black">"{campaign.name}"</span> โปรดสละเวลาอ่านรายละเอียดต่อไปนี้อย่างถี่ถ้วนก่อนเริ่มต้นการทดสอบ:
+            <p className="text-xs text-slate-600 leading-relaxed">
+              ยินดีต้อนรับสู่ระบบประเมินความรู้พนักงาน (ESS Platform) สำหรับหัวข้อ <span className="font-semibold text-slate-800">"{campaign.name}"</span> กรุณาทำความเข้าใจเงื่อนไขและข้อมูลเบื้องต้นด้านล่างนี้ก่อนเริ่มประเมินผล:
             </p>
           </div>
 
           {/* Details Grid */}
-          <div className="grid grid-cols-2 gap-3 font-mono">
-            <div className="p-3 bg-slate-50 border-2 border-black rounded-none flex flex-col justify-between">
-              <div>
-                <span className="text-[9px] font-bold text-slate-400 block uppercase">เวลาสอบทั้งหมด</span>
-                <span className="text-xs font-black text-slate-900">{campaign.isUntimed ? "ไม่จำกัดเวลา" : `${campaign.timeLimitMinutes} นาที`}</span>
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-1.5">
+              <span className="text-[10px] font-bold text-slate-400 block uppercase">เวลาทำข้อสอบทั้งหมด</span>
+              <span className="font-bold text-slate-800 text-sm">{campaign.isUntimed ? "ไม่จำกัดเวลา (Untimed)" : `${campaign.timeLimitMinutes} นาที`}</span>
             </div>
 
-            <div className="p-3 bg-slate-50 border-2 border-black rounded-none flex flex-col justify-between">
-              <div>
-                <span className="text-[9px] font-bold text-slate-400 block uppercase">โจทย์คำถามสอบจริง</span>
-                <span className="text-xs font-black text-slate-900">
-                  {campaign.totalQuestionsToTest && campaign.totalQuestionsToTest > 0 
-                    ? `${campaign.totalQuestionsToTest} ข้อ (สุ่มจากคลัง)` 
-                    : `${campaign.questions.length} ข้อ`}
-                </span>
-              </div>
+            <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-1.5">
+              <span className="text-[10px] font-bold text-slate-400 block uppercase">โจทย์คำถามจริง</span>
+              <span className="font-bold text-slate-800 text-sm">
+                {campaign.totalQuestionsToTest && campaign.totalQuestionsToTest > 0 
+                  ? `${campaign.totalQuestionsToTest} ข้อ (สุ่มจากคลังคำถาม)` 
+                  : `${campaign.questions.length} ข้อ`}
+              </span>
             </div>
 
-            <div className="p-3 bg-slate-50 border-2 border-black rounded-none flex flex-col justify-between">
-              <div>
-                <span className="text-[9px] font-bold text-slate-400 block uppercase">เกณฑ์การผ่าน</span>
-                <span className="text-xs font-black text-[#2DC84D]">{campaign.passingPercentage}% ของคะแนนเต็ม</span>
-              </div>
+            <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-1.5">
+              <span className="text-[10px] font-bold text-slate-400 block uppercase">เกณฑ์ผ่านประเมิน</span>
+              <span className="font-bold text-emerald-600 text-sm">ต้องได้คะแนน ≥ {campaign.passingPercentage}%</span>
             </div>
 
-            <div className="p-3 bg-slate-50 border-2 border-black rounded-none flex flex-col justify-between">
-              <div>
-                <span className="text-[9px] font-bold text-slate-400 block uppercase">กลุ่มเป้าหมาย</span>
-                <span className="text-xs font-black text-slate-900 truncate block">{campaign.groupName || "-"}</span>
-              </div>
+            <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-1.5">
+              <span className="text-[10px] font-bold text-slate-400 block uppercase">กลุ่มเป้าหมายผู้สอบ</span>
+              <span className="font-bold text-slate-800 text-sm truncate block">{campaign.groupName || "-"}</span>
             </div>
           </div>
 
           {/* Instructions Box */}
-          <div className="space-y-3 pt-2 border-t-2 border-slate-100">
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block font-mono">คำชี้แจงในการเลือกตัดสินใจ (Your Choices)</span>
+          <div className="space-y-3 pt-4 border-t border-slate-100">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">ทางเลือกในการทำแบบทดสอบ (Your Choices)</span>
             
             <div className="space-y-3">
-              <div className="p-3.5 bg-rose-50 border-2 border-black rounded-none flex gap-3 text-xs">
-                <XCircle size={20} className="text-rose-500 shrink-0 mt-0.5" />
-                <p className="leading-relaxed text-rose-950 font-semibold text-[11px]">
-                  <strong>หากคุณคลิก "ไม่เข้าร่วม":</strong> ระบบจะนำคุณออกจากหน้านี้โดยทันที โดย <span className="underline font-black">สิทธิ์และจำนวนครั้งในการทำข้อสอบของคุณจะไม่สูญเสียหรือถูกหักไป</span> และคุณสามารถกลับเข้ามาล็อกอินเข้าทดสอบใหม่ได้ทุกเมื่อเมื่อพร้อม
+              <div className="p-4 bg-rose-50/50 border border-rose-100/50 rounded-xl flex gap-3 text-xs leading-relaxed">
+                <XCircle size={18} className="text-rose-500 shrink-0 mt-0.5" />
+                <p className="text-slate-600 font-medium">
+                  <strong className="text-rose-800">หากเลือก "ไม่เข้าร่วม":</strong> ระบบจะนำท่านกลับโดยทันที โดยสิทธิ์และจำนวนครั้งในการทำข้อสอบของท่านจะไม่สูญเสียไป ท่านสามารถล็อกอินเข้ารับการประเมินในภายหลังได้เมื่อพร้อม
                 </p>
               </div>
 
-              <div className="p-3.5 bg-emerald-50 border-2 border-black rounded-none flex gap-3 text-xs">
-                <CheckCircle size={20} className="text-emerald-500 shrink-0 mt-0.5" />
-                <p className="leading-relaxed text-emerald-950 font-semibold text-[11px]">
-                  <strong>หากคุณคลิก "เข้าร่วม":</strong> ระบบจะนำคุณเข้าสู่หน้าแสดงข้อมูลส่วนตัว (User Information) เพื่อตรวจสอบความถูกต้องของข้อมูลพนักงาน ก่อนเริ่มต้นทำแบบทดสอบทันที
+              <div className="p-4 bg-emerald-50/50 border border-emerald-100/50 rounded-xl flex gap-3 text-xs leading-relaxed">
+                <CheckCircle size={18} className="text-emerald-500 shrink-0 mt-0.5" />
+                <p className="text-slate-600 font-medium">
+                  <strong className="text-emerald-800">หากเลือก "เข้าร่วม":</strong> ระบบจะนำท่านเข้าสู่ขั้นตอนยืนยันข้อมูลพนักงาน เพื่อตรวจสอบความถูกต้องของข้อมูลส่วนบุคคลก่อนเริ่มสอบจับเวลาจริง
                 </p>
               </div>
             </div>
@@ -892,20 +923,20 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
                 setAnswers({});
                 setCurrentIdx(0);
                 setIsExamActive(false);
-                showSuccess("ออกจากระบบสำเร็จ", "สิทธิ์การสอบของคุณยังคงอยู่ครบถ้วนตามเดิม สามารถเข้าทดสอบภายหลังได้เมื่อพร้อมครับ");
+                showSuccess("ออกจากระบบสำเร็จ", "สิทธิ์การทำข้อสอบของคุณยังคงปลอดภัย คุณสามารถกลับมาเข้าทดสอบได้ภายหลัง");
               }}
-              className="py-3 px-4 bg-rose-200 hover:bg-rose-300 text-slate-950 border-3 border-black rounded-none text-xs font-black uppercase tracking-wider shadow-[4px_4px_0px_0px_#464C59] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
+              className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full text-xs font-bold tracking-wide transition-all duration-200 cursor-pointer text-center flex items-center justify-center gap-1.5"
             >
-              <XCircle size={14} className="text-rose-700" /> ไม่เข้าร่วม
+              <XCircle size={14} className="text-slate-500" /> ไม่เข้าร่วม
             </button>
 
             <button
               onClick={() => {
                 setHasAcceptedInstruction(true);
               }}
-              className="py-3 px-4 bg-[#2DC84D] hover:bg-emerald-500 text-black border-3 border-black rounded-none text-xs font-black uppercase tracking-wider shadow-[4px_4px_0px_0px_#464C59] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
+              className="py-3 px-4 bg-[#1D366D] hover:bg-indigo-950 text-white rounded-full text-xs font-bold tracking-wide shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer text-center flex items-center justify-center gap-1.5"
             >
-              <CheckCircle size={14} className="text-emerald-700" /> เข้าร่วม
+              <CheckCircle size={14} className="text-white/80" /> เข้าร่วมประเมิน
             </button>
           </div>
         </div>
@@ -916,96 +947,100 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
   // B2. Pre-test Verified Profile Gate Screen (Verification Required)
   if (!isRegistered) {
     return (
-      <div className="max-w-md mx-auto my-8 bg-white border-3 border-black rounded-none shadow-[6px_6px_0px_0px_#464C59] overflow-hidden animate-in fade-in duration-300 text-left">
+      <div className="max-w-md mx-auto my-12 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden animate-in fade-in duration-300 text-left">
         {/* Verification banner header */}
-        <div className="bg-[#1D366D] p-6 text-white text-center border-b-3 border-black">
-          <ShieldCheck className="mx-auto text-white mb-2" size={32} />
-          <h2 className="text-lg font-black font-sans tracking-tight uppercase">ยืนยันโปรไฟล์ผู้เข้าสอบ</h2>
-          <p className="text-[10px] text-slate-300 font-mono font-bold">Verified Candidate Profile Gate</p>
+        <div className="bg-[#1D366D] p-8 text-white text-center space-y-2">
+          <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mx-auto">
+            <ShieldCheck className="text-white" size={24} />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-lg font-bold font-sans tracking-tight">ยืนยันโปรไฟล์ผู้เข้าประเมิน</h2>
+            <p className="text-[11px] text-slate-300 font-semibold">Verified Candidate Profile Gate</p>
+          </div>
         </div>
 
         {/* Verified details container */}
-        <div className="p-6 space-y-5">
-          <div className="bg-amber-50 border-3 border-black rounded-none p-4 text-xs text-amber-900 space-y-1">
-            <p className="font-black flex items-center gap-1">
-              <AlertCircle size={14} /> โปรดอ่านคำชี้แจงก่อนทำข้อสอบ
+        <div className="p-8 space-y-6">
+          <div className="bg-amber-50/60 border border-amber-100/50 rounded-xl p-4 text-xs text-amber-900 space-y-1.5 leading-relaxed">
+            <p className="font-bold flex items-center gap-1">
+              <AlertCircle size={14} className="text-amber-600" /> โปรดตรวจสอบประวัติของคุณก่อนเริ่มทำแบบประเมิน
             </p>
-            <p className="leading-relaxed text-[11px] text-amber-800 font-medium">
-              ข้อมูลโปรไฟล์พนักงานด้านล่างนี้ ได้รับการดึงขึ้นมาจากระบบฐานข้อมูลจริงอย่างเป็นทางการของบริษัท หากข้อมูลถูกต้องครบถ้วน กรุณากดปุ่ม <strong>"ยืนยันความถูกต้องและเริ่มทำข้อสอบ"</strong> ด้านล่างเพื่อเริ่มทำทันที
+            <p className="text-slate-600">
+              รายละเอียดโปรไฟล์พนักงานด้านล่างนี้ถูกดึงขึ้นมาจากระบบประวัติส่วนบุคคลอย่างเป็นทางการ หากถูกต้อง กรุณากดปุ่ม <strong>"เริ่มแบบประเมินผล"</strong> เพื่อเริ่มทำทันที
             </p>
           </div>
 
           {/* Profile fields bento grid */}
           <div className="space-y-3 text-left">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-mono">ข้อมูลพนักงานของคุณ (Verified Profile)</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">ประวัติพนักงานอย่างเป็นทางการ (Verified Profile)</span>
             
-            <div className="p-4 bg-slate-50 border-3 border-black rounded-none space-y-3 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+            <div className="p-5 bg-slate-50 border border-slate-100 rounded-xl space-y-4">
               {/* Name & Surname */}
               <div className="flex items-center gap-3">
-                <div className="p-1.5 bg-white border border-slate-200 rounded-none text-slate-700">
+                <div className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500 shrink-0">
                   <User size={14} />
                 </div>
                 <div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block font-mono">ชื่อจริง - นามสกุล</span>
-                  <span className="text-xs font-black text-slate-900">{userProfile?.name} {userProfile?.surname}</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">ชื่อจริง - นามสกุล</span>
+                  <span className="text-xs font-bold text-slate-800">{userProfile?.name} {userProfile?.surname}</span>
                 </div>
               </div>
 
               {/* Employee ID (EM No) */}
-              <div className="flex items-center gap-3 border-t-2 border-slate-200 pt-2.5">
-                <div className="p-1.5 bg-white border border-slate-200 rounded-none text-slate-700">
+              <div className="flex items-center gap-3 border-t border-slate-200/50 pt-3">
+                <div className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500 shrink-0">
                   <Hash size={14} />
                 </div>
                 <div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block font-mono">รหัสพนักงาน (Employee No)</span>
-                  <span className="text-xs font-black text-slate-900 font-mono">{userProfile?.emNo}</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">รหัสพนักงาน (Employee No)</span>
+                  <span className="text-xs font-bold text-slate-800 font-mono">{userProfile?.emNo}</span>
                 </div>
               </div>
 
               {/* Department */}
-              <div className="flex items-center gap-3 border-t-2 border-slate-200 pt-2.5">
-                <div className="p-1.5 bg-white border border-slate-200 rounded-none text-slate-700">
+              <div className="flex items-center gap-3 border-t border-slate-200/50 pt-3">
+                <div className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500 shrink-0">
                   <Briefcase size={14} />
                 </div>
                 <div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block font-mono">แผนก / ฝ่าย (Department)</span>
-                  <span className="text-xs font-black text-slate-900">{userProfile?.department || "-"}</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">แผนก / ฝ่าย (Department)</span>
+                  <span className="text-xs font-bold text-slate-800">{userProfile?.department || "-"}</span>
                 </div>
               </div>
 
               {/* Company */}
-              <div className="flex items-center gap-3 border-t-2 border-slate-200 pt-2.5">
-                <div className="p-1.5 bg-white border border-slate-200 rounded-none text-slate-700">
+              <div className="flex items-center gap-3 border-t border-slate-200/50 pt-3">
+                <div className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500 shrink-0">
                   <Building size={14} />
                 </div>
                 <div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block font-mono">บริษัท (Company)</span>
-                  <span className="text-xs font-black text-slate-900 font-mono">{userProfile?.company || "-"}</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block">บริษัท (Company)</span>
+                  <span className="text-xs font-bold text-slate-800">{userProfile?.company || "-"}</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Campaign details */}
-          <div className="grid grid-cols-2 gap-3 p-3 bg-slate-100 border-3 border-black rounded-none text-[11px] font-black font-mono text-slate-900">
-            <div className="flex items-center gap-1.5">
-              <Clock size={12} className="text-[#1D366D]" />
+          <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-600">
+            <div className="flex items-center gap-2">
+              <Clock size={14} className="text-[#1D366D] shrink-0" />
               <span>เวลาสอบ: {campaign.isUntimed ? "ไม่จำกัดเวลา" : `${campaign.timeLimitMinutes} นาที`}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <FileText size={12} className="text-[#1D366D]" />
-              <span>โจทย์คำถาม: {campaign.totalQuestionsToTest && campaign.totalQuestionsToTest > 0 ? `${campaign.totalQuestionsToTest} ข้อ` : `${campaign.questions.length} ข้อ`}</span>
+            <div className="flex items-center gap-2">
+              <FileText size={14} className="text-[#1D366D] shrink-0" />
+              <span>โจทย์: {campaign.totalQuestionsToTest && campaign.totalQuestionsToTest > 0 ? `${campaign.totalQuestionsToTest} ข้อ` : `${campaign.questions.length} ข้อ`}</span>
             </div>
           </div>
 
           {/* Buttons row */}
-          <div className="flex flex-col gap-2 pt-1">
+          <div className="space-y-2.5 pt-2">
             <button
               onClick={handleStartExam}
-              className="w-full py-3 bg-[#2DC84D] hover:bg-emerald-500 text-black border-3 border-black rounded-none text-xs font-black uppercase tracking-wider shadow-[4px_4px_0px_0px_#464C59] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="w-full py-3 bg-[#2DC84D] hover:bg-emerald-500 text-black rounded-full text-xs font-bold tracking-wider shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
             >
-              <ShieldCheck size={14} />
-              ยืนยันโปรไฟล์ & เริ่มทำข้อสอบ
+              <ShieldCheck size={16} />
+              ยืนยันประวัติ & เริ่มทำข้อสอบ
             </button>
             
             <button
@@ -1022,9 +1057,9 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
                 setCurrentIdx(0);
                 setIsExamActive(false);
               }}
-              className="w-full py-2 border-3 border-black bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-none text-[10px] font-black font-mono uppercase tracking-wider transition-all cursor-pointer"
+              className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer text-center"
             >
-              ออกจากระบบ เพื่อเปลี่ยนพนักงานเข้าสอบ
+              ออกจากระบบ เพื่อเปลี่ยนพนักงานเข้าประเมิน
             </button>
           </div>
         </div>
@@ -1038,59 +1073,59 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
   const isTimeUrgent = !campaign?.isUntimed && timeRemaining < 120; // less than 2 minutes left
 
   return (
-    <div className="max-w-4xl mx-auto my-4 grid grid-cols-1 lg:grid-cols-4 gap-6 items-start text-left">
+    <div className="max-w-4xl mx-auto my-6 grid grid-cols-1 lg:grid-cols-4 gap-6 items-start text-left animate-in fade-in duration-300">
       {/* Sidebar: Navigation Grid & Clock */}
       <div className="lg:col-span-1 space-y-4 lg:sticky lg:top-4 order-last lg:order-first">
         {/* Floating Timer Card */}
-        <div className={`p-4 border-3 border-black rounded-none shadow-[4px_4px_0px_0px_#464C59] flex items-center justify-between ${
+        <div className={`p-4 border rounded-2xl shadow-sm flex items-center justify-between transition-all duration-300 ${
           !campaign?.isUntimed && isTimeUrgent 
-            ? "bg-rose-300 text-slate-950 animate-pulse" 
-            : "bg-white text-slate-900"
+            ? "bg-rose-50 border-rose-100 text-rose-800 animate-pulse shadow-rose-100/50" 
+            : "bg-white border-slate-100 text-slate-800"
         }`}>
           <div className="flex items-center gap-2">
-            <Clock className={!campaign?.isUntimed && isTimeUrgent ? "text-slate-950" : "text-[#1D366D]"} size={18} />
-            <span className="text-[10px] font-black uppercase tracking-widest font-mono text-slate-600">
-              {campaign?.isUntimed ? "ใช้เวลาทำข้อสอบ:" : "เวลาที่เหลือ:"}
+            <Clock className={!campaign?.isUntimed && isTimeUrgent ? "text-rose-600" : "text-[#1D366D]"} size={16} />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              {campaign?.isUntimed ? "เวลาที่ใช้ไป:" : "เวลาที่เหลือ:"}
             </span>
           </div>
-          <span className="text-xl font-black font-mono tracking-tight text-slate-950">
+          <span className="text-lg font-bold font-mono tracking-tight">
             {campaign?.isUntimed ? formatTimer(durationUsed) : formatTimer(timeRemaining)}
           </span>
         </div>
 
         {/* Layout Presentation Toggle */}
-        <div className="bg-white border-3 border-black rounded-none p-4 shadow-[4px_4px_0px_0px_#464C59] space-y-3">
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider font-mono block border-b-3 border-slate-100 pb-1.5">รูปแบบการแสดงผล (Layout Mode)</span>
-          <div className="grid grid-cols-2 gap-2">
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm space-y-3">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block border-b border-slate-50 pb-2">รูปแบบการแสดงผล (Layout)</span>
+          <div className="grid grid-cols-2 gap-1.5">
             <button
               onClick={() => setLayoutMode("slider")}
-              className={`py-1.5 px-2 text-[10px] font-black font-mono rounded-none transition-all border-3 border-black cursor-pointer ${
+              className={`py-2 px-2 text-[10px] font-bold rounded-lg transition-all duration-200 cursor-pointer ${
                 layoutMode === "slider"
-                  ? "bg-[#2DC84D] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                  : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                  ? "bg-[#1D366D] text-white shadow-sm"
+                  : "bg-slate-50 text-slate-500 hover:bg-slate-100/80"
               }`}
             >
-              ทำทีละข้อ (Slider)
+              ทำทีละข้อ
             </button>
             <button
               onClick={() => setLayoutMode("scroll")}
-              className={`py-1.5 px-2 text-[10px] font-black font-mono rounded-none transition-all border-3 border-black cursor-pointer ${
+              className={`py-2 px-2 text-[10px] font-bold rounded-lg transition-all duration-200 cursor-pointer ${
                 layoutMode === "scroll"
-                  ? "bg-[#2DC84D] text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                  : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                  ? "bg-[#1D366D] text-white shadow-sm"
+                  : "bg-slate-50 text-slate-500 hover:bg-slate-100/80"
               }`}
             >
-              แสดงทั้งหมด (Scroll)
+              แสดงทั้งหมด
             </button>
           </div>
         </div>
 
         {/* Student Progress Map Grid */}
-        <div className="bg-white border-3 border-black rounded-none p-4 shadow-[4px_4px_0px_0px_#464C59] space-y-3">
-          <div className="flex justify-between items-center border-b-3 border-slate-100 pb-2">
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider font-mono">แผงคำถาม</span>
-            <span className="text-[11px] font-mono font-black text-slate-900 underline">
-              ทำแล้ว {answeredCount}/{shuffledQuestions.length}
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm space-y-3">
+          <div className="flex justify-between items-center border-b border-slate-50 pb-2.5">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">แผงข้อสอบ</span>
+            <span className="text-xs font-semibold text-slate-700 bg-slate-50 px-2.5 py-1 rounded-full">
+              ทำแล้ว {answeredCount}/{shuffledQuestions.length} ข้อ
             </span>
           </div>
 
@@ -1112,12 +1147,12 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
                       }
                     }
                   }}
-                  className={`py-2 text-xs font-black font-mono rounded-none transition-all border-3 border-black cursor-pointer ${
+                  className={`py-2 text-xs font-bold font-mono rounded-lg transition-all duration-200 cursor-pointer ${
                     isSelected
-                      ? "bg-[#1D366D] text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                      ? "bg-[#1D366D] text-white shadow-sm hover:bg-indigo-900"
                       : hasAnswered
-                      ? "bg-[#2DC84D] text-black font-black"
-                      : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                      ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-100/50"
+                      : "bg-slate-50 text-slate-500 hover:bg-slate-100/80 border border-transparent"
                   }`}
                 >
                   {qIndex + 1}
@@ -1126,14 +1161,14 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
             })}
           </div>
 
-          <div className="pt-2 border-t-3 border-slate-100 flex flex-col gap-1.5 text-[10px] text-slate-500 font-mono font-bold uppercase tracking-wider">
-            <div className="flex items-center gap-1.5">
-              <span className="inline-block w-2.5 h-2.5 rounded-none border-2 border-black bg-[#2DC84D]" />
-              <span>ตอบแล้ว</span>
+          <div className="pt-2.5 border-t border-slate-50 flex flex-col gap-1.5 text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-100 border border-emerald-200" />
+              <span>ทำคำตอบเรียบร้อยแล้ว</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="inline-block w-2.5 h-2.5 rounded-none border-2 border-slate-300 bg-slate-100" />
-              <span>ยังไม่ได้ตอบ</span>
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-100 border border-slate-200" />
+              <span>ยังไม่ได้เลือกตอบ</span>
             </div>
           </div>
         </div>
@@ -1142,21 +1177,21 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
       {/* Main Panel: Active Question Slider or Scroll list */}
       <div className="lg:col-span-3 space-y-4">
         {/* Exam Title header */}
-        <div className="bg-slate-950 text-white p-4 rounded-none flex items-center justify-between gap-4 border-3 border-black shadow-[4px_4px_0px_0px_#464C59]">
+        <div className="bg-[#1D366D] text-white p-5 rounded-2xl flex items-center justify-between gap-4 shadow-sm">
           <div>
-            <span className="text-[9px] font-black uppercase tracking-widest text-[#2DC84D] font-mono">รหัสผู้สอบ: {userIdentifier}</span>
-            <h2 className="text-xs font-black font-sans uppercase line-clamp-1 mt-0.5">{campaign.name}</h2>
+            <span className="text-[9px] uppercase tracking-wider text-emerald-400 font-bold block mb-0.5">รหัสผู้สอบ: {userIdentifier}</span>
+            <h2 className="text-sm font-bold tracking-tight line-clamp-1">{campaign.name}</h2>
           </div>
-          <div className="flex items-center gap-2 shrink-0 font-sans">
-            <span className="text-xs font-black font-mono bg-white/10 px-2.5 py-1 rounded-none border border-white/20">
-              {layoutMode === "slider" ? `ข้อ ${currentIdx + 1} / ${shuffledQuestions.length}` : `แสดงข้อสอบ ${shuffledQuestions.length} ข้อ`}
+          <div className="flex items-center gap-3 shrink-0 font-sans">
+            <span className="text-xs font-bold font-mono bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
+              {layoutMode === "slider" ? `ข้อที่ ${currentIdx + 1} / ${shuffledQuestions.length}` : `รวม ${shuffledQuestions.length} ข้อ`}
             </span>
             <button
               onClick={handleLogout}
-              className="px-2.5 py-1.5 bg-rose-500 hover:bg-rose-600 text-white border-2 border-black rounded-none text-[10px] font-black uppercase font-mono tracking-wider transition-all cursor-pointer flex items-center gap-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px]"
+              className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center gap-1"
             >
               <LogOut size={12} />
-              Logout
+              ออก
             </button>
           </div>
         </div>
@@ -1164,11 +1199,11 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
         {layoutMode === "scroll" ? (
           <div className="space-y-6">
             {shuffledQuestions.map((q, qIdx) => (
-              <div key={q.id} id={`scroll-question-${qIdx}`} className="bg-white border-3 border-black rounded-none p-6 shadow-[4px_4px_0px_0px_#464C59] space-y-4 transition-all scroll-mt-6">
-                <h3 className="text-base font-black text-slate-900 leading-relaxed font-sans">
+              <div key={q.id} id={`scroll-question-${qIdx}`} className="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 shadow-sm space-y-5 transition-all scroll-mt-6">
+                <h3 className="text-sm sm:text-base font-bold text-slate-800 leading-relaxed font-sans">
                   ข้อที่ {qIdx + 1}. {q.text}
                 </h3>
-                <div className="space-y-3 pl-1">
+                <div className="space-y-2.5 pl-1">
                   {q.options.map((option, oIdx) => {
                     const isChecked = answers[q.id] === option;
                     return (
@@ -1178,20 +1213,20 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
                           handleSelectOption(q.id, option);
                           setCurrentIdx(qIdx);
                         }}
-                        className={`w-full text-left p-4 rounded-none text-xs font-bold border-3 border-black flex items-center gap-3 transition-all cursor-pointer ${
+                        className={`w-full text-left p-4 rounded-xl text-xs font-semibold border transition-all duration-200 cursor-pointer flex items-center gap-3 ${
                           isChecked
-                            ? "bg-blue-50 text-slate-950 border-[#1D366D] ring-2 ring-[#1D366D]/10"
-                            : "bg-white hover:bg-slate-50 text-slate-700"
+                            ? "bg-indigo-50/40 border-[#1D366D] text-slate-900 shadow-sm"
+                            : "bg-white hover:bg-slate-50 border-slate-100 text-slate-600"
                         }`}
                       >
-                        <span className={`w-6 h-6 rounded-none border-2 border-black flex items-center justify-center font-black text-xs font-mono shrink-0 transition-all ${
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-all duration-200 ${
                           isChecked
-                            ? "bg-slate-900 text-white"
+                            ? "bg-[#1D366D] text-white"
                             : "bg-slate-100 text-slate-500"
                         }`}>
                           {String.fromCharCode(65 + oIdx)}
                         </span>
-                        <span className="leading-relaxed font-bold">{option}</span>
+                        <span className="leading-relaxed flex-1">{option}</span>
                       </button>
                     );
                   })}
@@ -1200,32 +1235,32 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
             ))}
 
             {/* Scroll Submit Banner */}
-            <div className="bg-white border-3 border-black rounded-none p-6 shadow-[4px_4px_0px_0px_#464C59] flex items-center justify-between gap-4">
-              <span className="text-xs text-slate-500 font-bold">
-                กรุณาตรวจสอบความถูกต้องของคำตอบทั้งหมด {answeredCount} / {shuffledQuestions.length} ข้อ ก่อนกดส่งคำตอบ
+            <div className="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+              <span className="text-xs text-slate-400 font-semibold leading-relaxed">
+                กรุณาตรวจสอบความถูกต้องของคำตอบทั้งหมด <span className="font-bold text-slate-700">{answeredCount} / {shuffledQuestions.length} ข้อ</span> ก่อนกดยืนยันส่งคะแนนประเมิน
               </span>
               <button
                 disabled={submitting}
                 onClick={handleManualSubmit}
-                className="inline-flex items-center gap-1.5 px-6 py-2.5 bg-[#2DC84D] hover:bg-emerald-500 text-black text-xs font-black rounded-none border-3 border-black shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] active:translate-y-[1px] transition-all cursor-pointer shrink-0"
+                className="inline-flex items-center gap-1.5 px-6 py-3 bg-[#2DC84D] hover:bg-emerald-500 text-black text-xs font-bold rounded-full transition-all duration-200 cursor-pointer shadow-sm active:translate-y-[1px] shrink-0"
               >
                 <Send size={14} />
-                {submitting ? "กำลังส่งคำตอบ..." : "ส่งข้อสอบทั้งหมด"}
+                {submitting ? "กำลังส่งข้อสอบ..." : "ส่งข้อสอบทั้งหมด"}
               </button>
             </div>
           </div>
         ) : (
           /* Question Slider Container */
           activeQuestion && (
-            <div className="bg-white border-3 border-black rounded-none p-6 sm:p-8 shadow-[4px_4px_0px_0px_#464C59] flex flex-col justify-between min-h-[40vh] space-y-6">
-              <div className="space-y-6">
+            <div className="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col justify-between min-h-[40vh] space-y-6">
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">
                 {/* Question Text */}
-                <h3 className="text-base sm:text-lg font-black text-slate-900 leading-relaxed font-sans">
+                <h3 className="text-sm sm:text-base font-bold text-slate-800 leading-relaxed font-sans">
                   {activeQuestion.text}
                 </h3>
-
+ 
                 {/* Shuffled Options choices */}
-                <div className="space-y-3 pl-1">
+                <div className="space-y-2.5 pl-1">
                   {activeQuestion.options.map((option, oIdx) => {
                     const isChecked = answers[activeQuestion.id] === option;
 
@@ -1233,20 +1268,20 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
                       <button
                         key={oIdx}
                         onClick={() => handleSelectOption(activeQuestion.id, option)}
-                        className={`w-full text-left p-4 rounded-none text-xs font-bold border-3 border-black flex items-center gap-3 transition-all cursor-pointer ${
+                        className={`w-full text-left p-4 rounded-xl text-xs font-semibold border transition-all duration-200 cursor-pointer flex items-center gap-3 ${
                           isChecked
-                            ? "bg-blue-50 text-slate-950 border-[#1D366D] ring-2 ring-[#1D366D]/10"
-                            : "bg-white hover:bg-slate-50 text-slate-700"
+                            ? "bg-indigo-50/40 border-[#1D366D] text-slate-900 shadow-sm"
+                            : "bg-white hover:bg-slate-50 border-slate-100 text-slate-600"
                         }`}
                       >
-                        <span className={`w-6 h-6 rounded-none border-2 border-black flex items-center justify-center font-black text-xs font-mono shrink-0 transition-all ${
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-all duration-200 ${
                           isChecked
-                            ? "bg-slate-900 text-white"
+                            ? "bg-[#1D366D] text-white"
                             : "bg-slate-100 text-slate-500"
                         }`}>
                           {String.fromCharCode(65 + oIdx)}
                         </span>
-                        <span className="leading-relaxed font-bold">{option}</span>
+                        <span className="leading-relaxed flex-1">{option}</span>
                       </button>
                     );
                   })}
@@ -1254,11 +1289,11 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
               </div>
 
               {/* Slider Navigation Footer */}
-              <div className="flex items-center justify-between gap-3 pt-6 border-t-3 border-slate-100">
+              <div className="flex items-center justify-between gap-3 pt-6 border-t border-slate-50">
                 <button
                   disabled={currentIdx === 0}
                   onClick={handlePrev}
-                  className="inline-flex items-center gap-1 px-4 py-2 border-3 border-black disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 text-xs font-black text-slate-800 rounded-none transition-all cursor-pointer shadow-[2px_2px_0px_0px_#464C59] active:translate-y-[1px]"
+                  className="inline-flex items-center gap-1 px-4 py-2 bg-slate-50 border border-slate-100 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-100/80 text-xs font-bold text-slate-600 rounded-full transition-all duration-200 cursor-pointer"
                 >
                   <ChevronLeft size={16} />
                   ย้อนกลับ
@@ -1267,7 +1302,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
                 {currentIdx < shuffledQuestions.length - 1 ? (
                   <button
                     onClick={handleNext}
-                    className="inline-flex items-center gap-1 px-5 py-2.5 bg-[#1D366D] hover:bg-indigo-950 text-white text-xs font-black rounded-none border-3 border-black shadow-[2px_2px_0px_0px_#464C59] active:translate-y-[1px] transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1 px-5 py-2.5 bg-[#1D366D] hover:bg-indigo-950 text-white text-xs font-bold rounded-full transition-all duration-200 cursor-pointer shadow-sm"
                   >
                     ข้อถัดไป
                     <ChevronRight size={16} />
@@ -1276,7 +1311,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
                   <button
                     disabled={submitting}
                     onClick={handleManualSubmit}
-                    className="inline-flex items-center gap-1.5 px-6 py-2.5 bg-[#2DC84D] hover:bg-emerald-500 text-black text-xs font-black rounded-none border-3 border-black shadow-[2px_2px_0px_0px_#464C59] active:translate-y-[1px] transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-6 py-2.5 bg-[#2DC84D] hover:bg-emerald-500 text-black text-xs font-bold rounded-full shadow-sm active:translate-y-[1px] transition-all duration-200 cursor-pointer"
                   >
                     <Send size={14} />
                     {submitting ? "กำลังส่งคำตอบ..." : "ส่งข้อสอบ"}

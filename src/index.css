@@ -1,18 +1,18 @@
-@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Bai+Jamjuree:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Sarabun", "Bai Jamjuree", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", "Sarabun", "Segoe UI", "Noto Sans Thai", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-brand-dark: #1a202c;
-  --color-brand-blue: #2d3748;
-  --color-brand-accent-blue: #1e3a8a;
-  --color-neo-red: #e11d48;
-  --color-neo-green: #22c55e;
+  --color-brand-dark: #0f172a;
+  --color-brand-blue: #1d3557;
+  --color-brand-accent-blue: #1D366D;
+  --color-neo-red: #ef4444;
+  --color-neo-green: #10b981;
   --color-aapico-blue: #1D366D;
   --color-aapico-green: #2DC84D;
-  --color-aapico-grey: #464C59;
+  --color-aapico-grey: #64748b;
 }
 
 /* Custom scrollbar hiding helper */
@@ -24,35 +24,124 @@
   scrollbar-width: none !important;  /* Firefox */
 }
 
-/* Base styling overrides for neo-brutalism sharp design (excluding SweetAlert2 to keep circles and nice dialogs) */
+/* Material Design 3 Enterprise Theme Variables & Base Style Overrides */
 *:not(.swal2-container):not(.swal2-container *) {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-  border-radius: 0 !important;
+  border-color: #e2e8f0 !important; /* Default soft border color for Material */
 }
 
-/* Neo-Brutalism Custom Classes */
-.neo-border-2 {
-  border: 2px solid #000;
+/* Force standard rounded-none elements to become beautiful Material 3 rounded cards/containers */
+.rounded-none, [class*="rounded-none"] {
+  border-radius: 16px !important; /* Material 3 Medium/Large container rounding */
 }
-.neo-border-3 {
-  border: 3px solid #000;
+
+/* Elements that require custom rounding overrides for Material 3 standard */
+button, button.rounded-none, .btn {
+  border-radius: 9999px !important; /* Material 3 fully-rounded pills for buttons */
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
 }
-.neo-shadow-black {
-  box-shadow: 4px 4px 0px 0px #000;
+
+/* Inputs, selects, textareas standard rounding */
+input, select, textarea, input.rounded-none, select.rounded-none, textarea.rounded-none {
+  border-radius: 12px !important; /* M3 input field rounding */
+  border: 1px solid #cbd5e1 !important;
+  background-color: #f8fafc !important;
+  padding: 0.75rem 1rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
-.neo-shadow-red {
-  box-shadow: 4px 4px 0px 0px #991b1b;
+
+/* Allow utility classes to override input padding for absolute icons */
+input.pl-9 {
+  padding-left: 2.25rem !important;
 }
-.neo-button-hover {
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+input.pl-10 {
+  padding-left: 2.5rem !important;
 }
-.neo-button-hover:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0px 0px #000;
+
+input:focus, select:focus, textarea:focus {
+  border-color: #1D366D !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(29, 54, 109, 0.15) !important;
+  outline: none !important;
 }
-.neo-button-active:active {
-  transform: translate(2px, 2px);
-  box-shadow: 0px 0px 0px 0px #000;
+
+/* Badges / small tags */
+span.rounded-none, label.rounded-none, [class*="badge"] {
+  border-radius: 8px !important;
+  font-weight: 600 !important;
 }
+
+/* Override heavy borders to clean Material 3 thin lines (1px) */
+.border-3, .border-2, .border-b-3, .border-t-3,
+[class*="border-3"], [class*="border-2"], [class*="border-t-3"], [class*="border-b-3"],
+.neo-border-2, .neo-border-3 {
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Force standard background lines to be modern Slate-200 */
+.border-black, [class*="border-black"] {
+  border-color: #cbd5e1 !important;
+}
+
+/* Override Flat/Solid shadows with beautiful Material 3 Elevations */
+.shadow-\[5px_5px_0px_0px_\#464C59\],
+.shadow-\[4px_4px_0px_0px_\#464C59\],
+.shadow-\[3px_3px_0px_0px_\#464C59\],
+.shadow-\[2px_2px_0px_0px_\#000\],
+.shadow-\[3px_3px_0px_0px_rgba\(0\,0\,0\,1\)\],
+.shadow-\[4px_4px_0px_0px_rgba\(0\,0\,0\,1\)\],
+.shadow-\[6px_6px_0px_0px_rgba\(0\,0\,0\,1\)\],
+.neo-shadow-black,
+.neo-shadow-red,
+[class*="shadow-["] {
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 8px -1px rgba(0, 0, 0, 0.03) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Hover elevation transitions */
+button:hover, .hover-elevation:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 10px 25px -5px rgba(29, 54, 109, 0.12), 0 8px 16px -6px rgba(29, 54, 109, 0.06) !important;
+}
+
+button:active {
+  transform: translateY(1px) !important;
+  box-shadow: 0 4px 10px -3px rgba(29, 54, 109, 0.1) !important;
+}
+
+/* Completely remove brutalist translate effect offsets on click and hover */
+.active\:translate-x-\[2px\], .active\:translate-y-\[2px\],
+.active\:translate-x-\[1px\], .active\:translate-y-\[1px\],
+.active\:translate-x-\[4px\], .active\:translate-y-\[4px\],
+.hover\:translate-x-\[-2px\], .hover\:translate-y-\[-2px\],
+.hover\:translate-x-\[-1px\], .hover\:translate-y-\[-1px\],
+[class*="active:translate-x-"], [class*="active:translate-y-"],
+[class*="hover:translate-x-"], [class*="hover:translate-y-"] {
+  transform: none !important;
+}
+
+/* Material Design Card styling helper */
+.m3-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+.m3-card-filled {
+  background: #f1f5f9;
+  border: none;
+  border-radius: 16px;
+}
+
+.m3-card-outlined {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 16px;
+}
+
 
 

@@ -253,12 +253,14 @@ export default function CampaignManager() {
     }
   };
 
-  const handleResetCampaign = async (id: string) => {
+  const handleResetCampaign = async (id: string, name: string) => {
     const confirmed = await showConfirm(
-      "ยืนยันการรีเซ็ตข้อมูลห้องสอบ?",
-      "การรีเซ็ตนี้จะลบประวัติการสอบ (attempts) และคะแนนสอบทั้งหมด (submissions) ของห้องสอบนี้อย่างถาวร รวมถึงข้อมูลในสมุดเช็คชื่อกลุ่มย่อย (Focus Group) และเคลียร์หน่วยความจำแคชในเบราว์เซอร์ (localStorage) ของห้องสอบนี้ด้วย ป้องกันการกดพลาดโดยไม่ได้ตั้งใจ"
+      `ยืนยันการรีเซ็ตข้อมูลห้องสอบ?`,
+      `ข้อมูลรายชื่อทั้งหมดในสมุดเช็คชื่อ (Focus Group) และประวัติ/คะแนนการเข้าสอบทั้งหมดเฉพาะห้องสอบ "${name}" จะถูกล้างข้อมูลทั้งหมดจนเป็นศูนย์\n\nคำเตือน: การรีเซ็ตนี้ไม่สามารถกู้คืนได้ คุณต้องการดำเนินการต่อหรือไม่?`
     );
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     try {
       const res = await fetch(`/api/campaigns/${id}/reset`, { method: "POST" });
@@ -267,17 +269,19 @@ export default function CampaignManager() {
         throw new Error(data.error || "เกิดข้อผิดพลาดในการรีเซ็ตห้องสอบ");
       }
       
-      // Clean up localStorage for this campaign
-      localStorage.removeItem(`campaign_attendance_focus_${id}`);
-      localStorage.removeItem(`quiz_progress_${id}`);
+      // Also clear local storage of the attendance focus group list for this specific campaign
+      try {
+        localStorage.removeItem(`campaign_attendance_focus_${id}`);
+      } catch (e) {
+        console.error("Failed to remove local storage focus key:", e);
+      }
 
-      showSuccess("รีเซ็ตห้องสอบสำเร็จ", "ระบบได้ล้างประวัติการสอบ คะแนน และแคชของห้องสอบนี้เรียบร้อยแล้ว");
+      showSuccess("รีเซ็ตห้องสอบสำเร็จ", `ล้างข้อมูลรายชื่อและคะแนนสอบทั้งหมดเฉพาะห้อง "${name}" เรียบร้อยแล้ว`);
       fetchCampaigns();
     } catch (err: any) {
-      showError("ไม่สามารถรีเซ็ตได้", err.message);
+      showError("ไม่สามารถรีเซ็ตห้องสอบได้", err.message);
     }
   };
-
 
   const toggleCampaignStatus = async (camp: Campaign, newStatus: "ACTIVE" | "COMPLETED" | "DRAFT") => {
     if (newStatus === "ACTIVE" && camp.questions.length === 0) {
@@ -359,52 +363,54 @@ export default function CampaignManager() {
     <div className="relative">
       {/* 1. List View */}
       {view === "list" && (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in duration-300">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-black text-slate-900 font-sans tracking-tighter uppercase">ระบบจัดสร้างห้องสอบควิซและวิเคราะห์สถิติ</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-800 font-sans tracking-tight">ระบบจัดสร้างห้องสอบควิซและวิเคราะห์สถิติ</h1>
               <p className="text-xs text-slate-500 font-medium">สร้างฟอร์มข้อสอบ จัดระเบียบกลุ่มผู้เรียน แยกห้องสอบรายกลุ่ม และรายงานสถิติทันที</p>
             </div>
-            <div className="flex flex-row items-center gap-2 w-full sm:w-auto">
+            <div className="flex flex-row items-center gap-2.5 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={handleResetDatabase}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 px-2.5 py-2.5 sm:px-4 sm:py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-none text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest border-3 border-black shadow-[4px_4px_0px_0px_#000000] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_#000000] cursor-pointer"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-full text-xs font-bold tracking-wide border border-rose-100/50 shadow-sm transition-all duration-200 cursor-pointer"
               >
                 <RotateCcw size={14} className="shrink-0" />
-                <span className="truncate">รีเซ็ต DB</span>
+                <span className="truncate">รีเซ็ตฐานข้อมูล</span>
               </button>
               <button
                 type="button"
                 onClick={handleCreateNew}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 px-2.5 py-2.5 sm:px-5 sm:py-3 bg-aapico-green hover:bg-[#25b542] text-black rounded-none text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest border-3 border-black shadow-[4px_4px_0px_0px_#000000] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_#000000] cursor-pointer"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-[#1D366D] hover:bg-indigo-950 text-white rounded-full text-xs font-bold tracking-wide shadow-sm transition-all duration-200 cursor-pointer"
               >
                 <Plus size={14} className="shrink-0" />
-                <span className="truncate">สร้างข้อสอบ</span>
+                <span className="truncate">สร้างห้องสอบใหม่</span>
               </button>
             </div>
           </div>
 
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-24">
-              <div className="w-8 h-8 border-4 border-black border-t-aapico-blue rounded-full animate-spin mb-4" />
-              <p className="text-slate-900 text-xs font-bold uppercase tracking-widest">กำลังโหลดห้องสอบข้อสอบ...</p>
+            <div className="flex flex-col items-center justify-center py-24 bg-white border border-slate-100 rounded-3xl shadow-sm">
+              <div className="w-8 h-8 border-3 border-slate-100 border-t-[#1D366D] rounded-full animate-spin mb-4" />
+              <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">กำลังโหลดห้องสอบ...</p>
             </div>
           ) : error ? (
-            <div className="p-4 bg-rose-50 border-3 border-black text-rose-800 rounded-none text-sm shadow-[4px_4px_0px_0px_#000000]">
-              <p className="font-bold uppercase tracking-tight">ข้อผิดพลาด</p>
-              <p className="text-xs text-rose-600 mt-1">{error}</p>
+            <div className="p-5 bg-rose-50 border border-rose-100 text-rose-800 rounded-2xl text-xs shadow-sm">
+              <p className="font-bold">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
+              <p className="text-rose-600 mt-1">{error}</p>
             </div>
           ) : campaigns.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 border-3 border-dashed border-black rounded-none bg-white text-center p-6 shadow-[4px_4px_0px_0px_#000000]">
-              <FileText className="text-slate-400 mb-3" size={48} />
-              <h3 className="text-base font-black text-slate-900 uppercase">ยังไม่พบห้องสอบควิซของคุณ</h3>
-              <p className="text-xs text-slate-500 mt-2 mb-6 max-w-sm font-medium">
-                เริ่มสร้างห้องสอบควิซชุดแรกเพื่อนำไปจัดทดสอบรายกลุ่ม กำหนดรหัสห้องสอบ ตัวเลือก แผนก และสถิติต่างๆ แบบล้ำลึก
+            <div className="flex flex-col items-center justify-center py-20 border border-dashed border-slate-200 rounded-3xl bg-white text-center p-6 shadow-sm">
+              <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 mb-4">
+                <FileText size={24} />
+              </div>
+              <h3 className="text-sm font-bold text-slate-800">ยังไม่พบห้องสอบควิซของคุณ</h3>
+              <p className="text-xs text-slate-400 mt-2 mb-6 max-w-sm font-medium leading-relaxed">
+                เริ่มสร้างห้องสอบควิซชุดแรกเพื่อนำไปจัดทดสอบรายกลุ่ม กำหนดรหัสห้องสอบ ตัวเลือก แผนก และรับผลสถิติทันที
               </p>
               <button
                 onClick={handleCreateNew}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-aapico-green hover:bg-[#25b542] text-black rounded-none text-xs font-black uppercase tracking-widest border-3 border-black shadow-[3px_3px_0px_0px_#000000] cursor-pointer transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0px_0px_#000000]"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#1D366D] hover:bg-indigo-950 text-white rounded-full text-xs font-bold tracking-wide shadow-sm transition-all duration-200 cursor-pointer"
               >
                 <Plus size={14} />
                 สร้างชุดข้อสอบใหม่
@@ -417,22 +423,22 @@ export default function CampaignManager() {
                 return (
                   <div
                     key={camp.id}
-                    className="bg-white border-3 border-black rounded-none p-6 shadow-[6px_6px_0px_0px_#000000] hover:shadow-[8px_8px_0px_0px_#000000] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all flex flex-col justify-between"
+                    className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
                   >
                     <div>
                       {/* Badge and ID Header */}
                       <div className="flex items-center justify-between gap-2 mb-4">
-                        <span className="text-[10px] font-black font-mono text-aapico-blue bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-none">
+                        <span className="text-[10px] font-bold font-mono text-[#1D366D] bg-indigo-50/50 px-2.5 py-1 rounded-lg border border-indigo-100/30">
                           ID: {camp.id.toUpperCase()}
                         </span>
 
                         <span
-                          className={`text-[10px] px-2.5 py-1 font-black uppercase tracking-wider rounded-none border-2 border-black ${
+                          className={`text-[10px] px-2.5 py-1 font-bold rounded-full border ${
                             camp.status === "ACTIVE"
-                              ? "bg-aapico-green text-black animate-pulse"
+                              ? "bg-emerald-50 border-emerald-100 text-emerald-700 animate-pulse"
                               : camp.status === "COMPLETED"
-                              ? "bg-slate-300 text-slate-700"
-                              : "bg-amber-300 text-black"
+                              ? "bg-slate-100 border-slate-200 text-slate-500"
+                              : "bg-amber-50 border-amber-100 text-amber-700"
                           }`}
                         >
                           {camp.status === "ACTIVE"
@@ -444,26 +450,26 @@ export default function CampaignManager() {
                       </div>
 
                       {/* Info Titles */}
-                      <h3 className="text-lg font-black text-slate-950 font-sans tracking-tight line-clamp-1 uppercase">
+                      <h3 className="text-base font-bold text-slate-800 tracking-tight line-clamp-1">
                         {camp.name}
                       </h3>
-                      <p className="text-xs text-slate-500 font-semibold mt-1">
-                        เป้าหมายผู้สอบ: <span className="font-black text-aapico-blue">{camp.groupName}</span>
+                      <p className="text-xs text-slate-400 font-medium mt-1">
+                        เป้าหมายผู้สอบ: <span className="font-semibold text-[#1D366D]">{camp.groupName}</span>
                       </p>
 
                       {/* Parameters Grid - 2 columns on PC, 1 column on Mobile */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 p-4 bg-slate-50 rounded-none border-2 border-black text-xs font-mono text-slate-600">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-4 p-3 bg-slate-50/50 rounded-xl border border-slate-100/50 text-xs text-slate-500">
                         
                         {/* 1. จำนวนข้อสอบ */}
-                        <div className="flex items-start gap-2.5 p-2.5 bg-white border-2 border-black rounded-none">
-                          <FileText size={14} className="text-aapico-blue shrink-0 mt-0.5" />
+                        <div className="flex items-start gap-2.5 p-2.5 bg-white border border-slate-100/50 rounded-xl">
+                          <FileText size={14} className="text-[#1D366D] shrink-0 mt-0.5" />
                           <div>
-                            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">จำนวนข้อสอบ</p>
-                            <p className="text-slate-950 font-bold mt-0.5 leading-snug">
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">จำนวนข้อสอบ</p>
+                            <p className="text-slate-700 font-semibold mt-0.5 leading-snug">
                               {camp.questionSelectionMode === "random" || camp.questionSelectionMode === "rule" ? (
-                                <span>ดึงสุ่ม <strong className="text-slate-950">{camp.ruleCount} ข้อ</strong> <span className="text-[10px] text-slate-400 block sm:inline sm:ml-0.5">(จากคลัง {camp.questions.length})</span></span>
+                                <span>ดึงสุ่ม <strong className="text-slate-800">{camp.ruleCount} ข้อ</strong> <span className="text-[10px] text-slate-400 block sm:inline sm:ml-0.5">(จากคลัง {camp.questions.length})</span></span>
                               ) : (
-                                <span>มีข้อสอบ <strong className="text-slate-950">
+                                <span>มีข้อสอบ <strong className="text-slate-800">
                                   {camp.totalQuestionsToTest && camp.totalQuestionsToTest > 0 ? Math.min(camp.totalQuestionsToTest, camp.questions.length) : camp.questions.length} ข้อ
                                 </strong></span>
                               )}
@@ -472,75 +478,75 @@ export default function CampaignManager() {
                         </div>
 
                         {/* 2. เกณฑ์การผ่าน */}
-                        <div className="flex items-start gap-2.5 p-2.5 bg-white border-2 border-black rounded-none">
-                          <Award size={14} className="text-aapico-green shrink-0 mt-0.5" />
+                        <div className="flex items-start gap-2.5 p-2.5 bg-white border border-slate-100/50 rounded-xl">
+                          <Award size={14} className="text-emerald-500 shrink-0 mt-0.5" />
                           <div>
-                            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">เกณฑ์การผ่าน</p>
-                            <p className="text-slate-950 font-bold mt-0.5 leading-snug">
-                              ได้คะแนน ≥ <strong className="text-aapico-green font-extrabold">{camp.passingPercentage}%</strong>
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">เกณฑ์การผ่าน</p>
+                            <p className="text-slate-700 font-semibold mt-0.5 leading-snug">
+                              ได้คะแนน ≥ <strong className="text-emerald-600 font-bold">{camp.passingPercentage}%</strong>
                             </p>
                           </div>
                         </div>
 
                         {/* 3. สิทธิ์การทำข้อสอบ */}
-                        <div className="flex items-start gap-2.5 p-2.5 bg-white border-2 border-black rounded-none">
-                          <RotateCcw size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                        <div className="flex items-start gap-2.5 p-2.5 bg-white border border-slate-100/50 rounded-xl">
+                          <RotateCcw size={14} className="text-amber-500 shrink-0 mt-0.5" />
                           <div>
-                            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">สิทธิ์การทำข้อสอบ</p>
-                            <p className="text-slate-950 font-bold mt-0.5 leading-snug">
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">สิทธิ์การทำข้อสอบ</p>
+                            <p className="text-slate-700 font-semibold mt-0.5 leading-snug">
                               {camp.maxAttempts && camp.maxAttempts > 0 ? (
-                                <span>จำกัด <strong className="text-slate-950">{camp.maxAttempts} ครั้ง</strong>/คน</span>
+                                <span>จำกัด <strong className="text-slate-800">{camp.maxAttempts} ครั้ง</strong>/คน</span>
                               ) : (
-                                <span className="text-slate-600 font-bold">ทำซ้ำได้ไม่จำกัด</span>
+                                <span className="text-slate-500 font-semibold">ไม่จำกัดครั้ง</span>
                               )}
                             </p>
                           </div>
                         </div>
 
                         {/* 4. เวลาทำข้อสอบ */}
-                        <div className="flex items-start gap-2.5 p-2.5 bg-white border-2 border-black rounded-none">
-                          <Clock size={14} className="text-aapico-blue shrink-0 mt-0.5" />
+                        <div className="flex items-start gap-2.5 p-2.5 bg-white border border-slate-100/50 rounded-xl">
+                          <Clock size={14} className="text-sky-500 shrink-0 mt-0.5" />
                           <div>
-                            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">เวลาทำข้อสอบ</p>
-                            <p className="text-slate-950 font-bold mt-0.5 leading-snug">
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">เวลาทำข้อสอบ</p>
+                            <p className="text-slate-700 font-semibold mt-0.5 leading-snug">
                               {camp.isUntimed ? (
-                                <span className="text-slate-600 font-bold">ไม่จำกัดเวลา</span>
+                                <span className="text-slate-500 font-semibold">ไม่จำกัดเวลา</span>
                               ) : (
-                                <span>จำกัด <strong className="text-slate-950">{camp.timeLimitMinutes} นาที</strong></span>
+                                <span>จำกัด <strong className="text-slate-800">{camp.timeLimitMinutes} นาที</strong></span>
                               )}
                             </p>
                           </div>
                         </div>
 
                         {/* 5. โหมดจัดสอบ */}
-                        <div className="flex items-start gap-2.5 p-2.5 bg-white border-2 border-black rounded-none col-span-1 sm:col-span-2">
-                          <Settings size={14} className="text-purple-600 shrink-0 mt-0.5" />
+                        <div className="flex items-start gap-2.5 p-2.5 bg-white border border-slate-100/50 rounded-xl col-span-1 sm:col-span-2">
+                          <Settings size={14} className="text-purple-500 shrink-0 mt-0.5" />
                           <div>
-                            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">โหมดจัดสอบ</p>
-                            <p className="text-slate-950 font-bold mt-0.5 leading-snug">
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">โหมดจัดสอบ</p>
+                            <p className="text-slate-700 font-semibold mt-0.5 leading-snug">
                               {camp.randomizationMode === "fully_random" ? (
-                                <span className="text-slate-950">สุ่มทั้งหมดดึงจากคลังข้อสอบ (Random Pool)</span>
+                                <span className="text-slate-700">สุ่มทั้งหมดดึงจากคลังข้อสอบ (Random Pool)</span>
                               ) : camp.randomizationMode === "fix_random" ? (
-                                <span className="text-slate-950">สุ่มสลับข้อและลำดับตัวเลือก (Shuffle Setup)</span>
+                                <span className="text-slate-700">สุ่มสลับข้อและลำดับตัวเลือก (Shuffle Setup)</span>
                               ) : (
-                                <span className="text-slate-600">จัดเรียงปกติคงเดิมตามคลัง (Static Sequence)</span>
+                                <span className="text-slate-500">จัดเรียงปกติคงเดิมตามคลัง (Static Sequence)</span>
                               )}
                             </p>
                           </div>
                         </div>
 
                         {/* 6. การเเสดงผลคำตอบ (เฉลยหลังสอบ) */}
-                        <div className="flex items-start gap-2.5 p-2.5 bg-white border-2 border-black rounded-none col-span-1 sm:col-span-2">
-                          <Eye size={14} className="text-pink-600 shrink-0 mt-0.5" />
+                        <div className="flex items-start gap-2.5 p-2.5 bg-white border border-slate-100/50 rounded-xl col-span-1 sm:col-span-2">
+                          <Eye size={14} className="text-pink-500 shrink-0 mt-0.5" />
                           <div>
-                            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">การแสดงผลคำตอบเฉลย</p>
-                            <p className="text-slate-950 font-bold mt-0.5 leading-snug">
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">การแสดงผลคำตอบเฉลย</p>
+                            <p className="text-slate-700 font-semibold mt-0.5 leading-snug">
                               {camp.resultsDisplayMode === "full" ? (
-                                <span className="text-aapico-green">แสดงคะแนนสรุป พร้อมคำอธิบายและเฉลยรายข้อละเอียด</span>
+                                <span className="text-emerald-600">แสดงคะแนนสรุป พร้อมคำอธิบายและเฉลยรายข้อละเอียด</span>
                               ) : camp.resultsDisplayMode === "score" ? (
-                                <span className="text-indigo-700">แสดงคะแนนรวมและสถานะผ่าน/ไม่ผ่านเท่านั้น (ไม่เฉลยคำตอบ)</span>
+                                <span className="text-indigo-600">แสดงคะแนนรวมและสถานะผ่าน/ไม่ผ่านเท่านั้น (ไม่เฉลย)</span>
                               ) : (
-                                <span className="text-rose-700">ซ่อนผลการสอบทันที (ไม่แสดงคะแนนและคำตอบ)</span>
+                                <span className="text-rose-600">ซ่อนผลการสอบทันที (ไม่แสดงคะแนนและคำตอบ)</span>
                               )}
                             </p>
                           </div>
@@ -548,9 +554,9 @@ export default function CampaignManager() {
 
                         {/* 7. รายละเอียดอื่นๆ เช่น ตารางเวลาเปิด/ปิด อัตโนมัติ */}
                         {(camp.startTime || camp.endTime) && (
-                          <div className="flex flex-col gap-1.5 col-span-1 sm:col-span-2 p-2.5 bg-indigo-50 border-2 border-black rounded-none text-[11px]">
-                            <p className="text-[10px] font-black uppercase tracking-wider text-aapico-blue">ระบบเปิด-ปิดอัตโนมัติ (Automated Schedule)</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-0.5 text-slate-800 font-bold">
+                          <div className="flex flex-col gap-1.5 col-span-1 sm:col-span-2 p-2.5 bg-indigo-50/50 border border-indigo-100/50 rounded-xl text-[11px]">
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-[#1D366D]">ระบบเปิด-ปิดอัตโนมัติ (Automated Schedule)</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-0.5 text-slate-600 font-semibold">
                               {camp.startTime && (
                                 <div className="flex items-center gap-1.5">
                                   <Calendar size={12} className="text-indigo-500 shrink-0" />
@@ -570,21 +576,23 @@ export default function CampaignManager() {
                     </div>
 
                     {/* Operational Toolbar */}
-                    <div className="mt-6 border-t-2 border-slate-100 pt-4 flex flex-col gap-3">
+                    <div className="mt-6 border-t border-slate-50 pt-4 flex flex-col gap-3">
                       <div className="flex flex-wrap items-center gap-2">
                         {/* Start Campaign */}
                         {camp.status !== "ACTIVE" ? (
                           <button
+                            type="button"
                             onClick={() => toggleCampaignStatus(camp, "ACTIVE")}
-                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-aapico-green hover:bg-[#25b542] border-2 border-black shadow-[2px_2px_0px_0px_#000000] text-black rounded-none text-xs font-black uppercase tracking-wider transition-all active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_#000000] cursor-pointer"
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-[#2DC84D] hover:bg-emerald-500 text-black rounded-full text-xs font-bold tracking-wide shadow-sm transition-all duration-200 cursor-pointer"
                           >
                             <Play size={13} />
                             เปิดระบบสอบ
                           </button>
                         ) : (
                           <button
+                            type="button"
                             onClick={() => toggleCampaignStatus(camp, "COMPLETED")}
-                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-400 hover:bg-rose-500 border-2 border-black shadow-[2px_2px_0px_0px_#000000] text-black rounded-none text-xs font-black uppercase tracking-wider transition-all active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_#000000] cursor-pointer"
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-full text-xs font-bold tracking-wide border border-rose-100/50 shadow-sm transition-all duration-200 cursor-pointer"
                           >
                             <Square size={13} />
                             ปิดระบบสอบ
@@ -594,8 +602,9 @@ export default function CampaignManager() {
                         {/* Share Links button */}
                         {camp.status === "ACTIVE" && (
                           <button
+                            type="button"
                             onClick={() => setShareCampaign(camp)}
-                            className="inline-flex items-center justify-center p-2 border-2 border-black bg-white text-aapico-blue hover:bg-indigo-50 rounded-none shadow-[2px_2px_0px_0px_#000000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_#000000] transition-all cursor-pointer"
+                            className="inline-flex items-center justify-center p-2.5 border border-slate-150 bg-white text-[#1D366D] hover:bg-slate-50 rounded-full shadow-sm transition-all duration-200 cursor-pointer"
                             title="ดูลิงก์แชร์และ QR Code"
                           >
                             <Link2 size={15} />
@@ -604,42 +613,45 @@ export default function CampaignManager() {
 
                         {/* View Statistics / Analytics */}
                         <button
+                          type="button"
                           onClick={() => {
                             setSelectedCampaign(camp);
                             setView("analytics");
                           }}
-                          className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 bg-slate-100 border-2 border-black text-slate-800 hover:bg-slate-200 rounded-none text-xs font-black uppercase tracking-wider shadow-[2px_2px_0px_0px_#000000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_#000000] transition-all cursor-pointer"
+                          className="flex-1 inline-flex items-center justify-center gap-1 px-4 py-2 bg-slate-50 border border-slate-100 hover:bg-slate-100 text-slate-700 rounded-full text-xs font-bold tracking-wide shadow-sm transition-all duration-200 cursor-pointer"
                         >
                           <BarChart3 size={13} />
                           วิเคราะห์ผลสอบ
                         </button>
                       </div>
 
-                      <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                      <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1.5">
                         <span>สร้างเมื่อ {new Date(camp.createdAt).toLocaleDateString("th-TH")}</span>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           <button
+                            type="button"
+                            onClick={() => handleResetCampaign(camp.id, camp.name)}
+                            className="p-1.5 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors duration-200 cursor-pointer"
+                            title="รีเซ็ตผลสอบและรายชื่อในห้องสอบนี้"
+                          >
+                            <RotateCcw size={14} />
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handleEdit(camp)}
-                            className="p-1.5 text-slate-500 hover:text-aapico-blue hover:bg-slate-100 rounded-none border border-transparent hover:border-black transition-colors cursor-pointer"
+                            className="p-1.5 text-slate-400 hover:text-[#1D366D] hover:bg-slate-50 rounded-lg transition-colors duration-200 cursor-pointer"
                             title="แก้ไขคำถามและตัวฟอร์ม"
                           >
                             <Edit size={14} />
                           </button>
                           <button
+                            type="button"
                             onClick={() => handleDelete(camp.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-none border border-transparent hover:border-black transition-colors cursor-pointer"
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors duration-200 cursor-pointer"
                             title="ลบห้องสอบ"
                           >
                             <Trash2 size={14} />
                           </button>
-                          <button
-                            onClick={() => handleResetCampaign(camp.id)}
-                            className="p-1.5 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-none border border-transparent hover:border-black transition-colors cursor-pointer"
-                            title="รีเซ็ตประวัติและคะแนนสอบ"
-                          >
-                            <RotateCcw size={14} />
-                          </button>
-
                         </div>
                       </div>
                     </div>
@@ -1130,7 +1142,7 @@ export default function CampaignManager() {
             <ArrowLeft size={14} />
             กลับหน้ารายการห้องสอบ
           </button>
-          <CampaignAnalytics campaign={selectedCampaign} onRefresh={fetchCampaigns} />
+          <CampaignAnalytics campaign={selectedCampaign} />
         </div>
       )}
 
