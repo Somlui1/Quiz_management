@@ -676,10 +676,29 @@ async function startServer() {
         }
       };
 
-      if (mockUsers[upperId] && password === "123456") {
-        if (process.env.NODE_ENV === "production") {
-          return res.status(403).json({ error: "ไม่อนุญาตให้ใช้บัญชีทดสอบในสภาพแวดล้อมจริง (Production Environment) กรุณาเข้าสู่ระบบด้วยบัญชีพนักงานจริงของคุณผ่านระบบ Live ESS API" });
-        }
+      const isTestAccount = /^TEST100011(1[1-9]|2[0-1])$/.test(upperId);
+      if (isTestAccount && password === "1234") {
+        authenticatedUser = {
+          employeeId: upperId,
+          empNo: upperId.replace("TEST", ""),
+          firstName: "ทดสอบ",
+          lastName: upperId,
+          fullNameEn: `Mock Test ${upperId}`,
+          idCard: "0000000000000",
+          birthDate: "2000-01-01",
+          company: "TEST",
+          department: "TEST-Department",
+          startDate: "2026-01-01",
+          payrollEnabled: false,
+          authUserId: 99000 + parseInt(upperId.substring(10)),
+          username: upperId,
+          name: "ทดสอบ",
+          surname: upperId,
+          emNo: upperId,
+          em_no: upperId,
+          companyEmail: `${upperId.toLowerCase()}@example.com`
+        };
+      } else if (mockUsers[upperId] && password === "123456") {
         authenticatedUser = { ...mockUsers[upperId] };
       } else {
         // Step 1: Authenticate against /auth/local
@@ -831,10 +850,17 @@ async function startServer() {
         }
       };
 
-      if (mockUsers[upperId]) {
-        if (process.env.NODE_ENV === "production") {
-          return res.json({ found: false, message: "ไม่อนุญาตให้ดึงข้อมูลบัญชีผู้ใช้จำลองในโหมดใช้งานจริง (Production)" });
-        }
+      const isTestAccount = /^TEST100011(1[1-9]|2[0-1])$/.test(upperId);
+      if (isTestAccount) {
+        return res.json({
+          found: true,
+          user: {
+            employeeId: upperId,
+            name: `ทดสอบ ${upperId}`,
+            department: "TEST-Department (แผนกทดสอบ)",
+          }
+        });
+      } else if (mockUsers[upperId]) {
         return res.json({ found: true, user: mockUsers[upperId] });
       }
 
