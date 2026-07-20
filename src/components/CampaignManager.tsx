@@ -922,7 +922,7 @@ export default function CampaignManager() {
                   <input
                     type="number"
                     required
-                    min={10}
+                    min={0}
                     max={100}
                     value={formPassingPercentage}
                     onChange={(e) => setFormPassingPercentage(Number(e.target.value))}
