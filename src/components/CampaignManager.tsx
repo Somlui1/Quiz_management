@@ -629,18 +629,46 @@ export default function CampaignManager() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {campaigns.map((camp) => {
+              {campaigns.map((camp, index) => {
                 const shareUrl = `${window.location.origin}/?campaignId=${camp.id}`;
                 return (
                   <div
                     key={camp.id}
-                    className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
+                    draggable={dragEnabled && view === "list"}
+                    onDragStart={(e) => handleDragStart(e, index)}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDrop={(e) => handleDrop(e, index)}
+                    onDragEnd={() => {
+                      handleDragEnd();
+                      setDragEnabled(false);
+                    }}
+                    onDragLeave={() => setDragOverIndex(null)}
+                    className={`bg-white border rounded-2xl p-6 shadow-sm transition-all duration-300 flex flex-col justify-between ${
+                      draggedIndex === index
+                        ? "opacity-30 border-indigo-400 border-dashed"
+                        : dragOverIndex === index
+                        ? "border-indigo-400 bg-indigo-50/10 scale-[1.01]"
+                        : "border-slate-100 hover:shadow-md hover:-translate-y-0.5"
+                    }`}
                   >
                     <div>
                       {/* Badge and ID Header */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-50 pb-3">
-                        <div className="flex items-center gap-1 bg-slate-50 border border-slate-200/80 pl-2.5 pr-1.5 py-1 rounded-xl shadow-2xs max-w-full">
-                          <span className="text-[10px] font-bold text-slate-400 font-mono uppercase shrink-0">รหัสควิซ:</span>
+                        <div className="flex items-center gap-1.5 max-w-full">
+                          {/* Drag Handle icon */}
+                          <div 
+                            className="text-slate-350 hover:text-slate-500 cursor-grab active:cursor-grabbing p-1 hover:bg-slate-50 rounded-lg shrink-0 select-none" 
+                            title="Drag to reorder"
+                            onMouseDown={() => setDragEnabled(true)}
+                            onMouseUp={() => setDragEnabled(false)}
+                            onTouchStart={() => setDragEnabled(true)}
+                            onTouchEnd={() => setDragEnabled(false)}
+                          >
+                            <GripVertical size={14} />
+                          </div>
+
+                          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200/80 pl-2.5 pr-1.5 py-1 rounded-xl shadow-2xs">
+                            <span className="text-[10px] font-bold text-slate-400 font-mono uppercase shrink-0">รหัสควิซ:</span>
                           <span className="text-sm sm:text-base font-black font-mono tracking-wider text-[#1D366D] truncate select-all">
                             {camp.id.toUpperCase()}
                           </span>
@@ -660,8 +688,9 @@ export default function CampaignManager() {
                             <span className="text-[9px] font-black text-emerald-600 animate-pulse ml-1 shrink-0">คัดลอกแล้ว!</span>
                           )}
                         </div>
+                      </div>
 
-                        <span
+                      <span
                           className={`text-[10px] px-2.5 py-1 font-black uppercase tracking-wider rounded-full border self-start sm:self-auto shrink-0 ${
                             camp.status === "ACTIVE"
                               ? "bg-emerald-50 border-emerald-100 text-emerald-700 animate-pulse"
