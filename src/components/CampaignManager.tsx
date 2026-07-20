@@ -111,21 +111,29 @@ export default function CampaignManager() {
     let reconnectTimeout: any = null;
 
     const connectSSE = () => {
-      eventSource = new EventSource("/api/campaigns/updates-sse");
+      const token = localStorage.getItem("authenticated_admin_token") || "";
+      console.log("[SSE] Connecting to Campaign Updates stream...");
+      eventSource = new EventSource(`/api/campaigns/updates-sse?token=${encodeURIComponent(token)}`);
+
+      eventSource.onopen = () => {
+        console.log("[SSE] Campaign Updates connection established successfully.");
+      };
 
       eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          console.log("[SSE] Received campaign event:", data);
           if (data.type === "campaigns-changed") {
+            console.log("[SSE] Campaigns updated on server. Reloading list silently...");
             fetchCampaigns(true); // Silent reload
           }
         } catch (e) {
-          console.error("Error parsing campaign update SSE message:", e);
+          console.error("[SSE] Error parsing campaign update message:", e);
         }
       };
 
       eventSource.onerror = (err) => {
-        console.warn("Campaign updates SSE disconnected. Reconnecting in 3 seconds...", err);
+        console.warn("[SSE] Campaign updates stream disconnected or errored. Reconnecting in 3 seconds...", err);
         if (eventSource) {
           eventSource.close();
           eventSource = null;
@@ -216,7 +224,7 @@ export default function CampaignManager() {
   const fetchCampaigns = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const res = await fetch("/api/campaigns");
+      const res = await fetch(`/api/campaigns?_ts=${Date.now()}`);
       if (!res.ok) throw new Error("Failed to load campaigns");
       const data = await res.json();
       setCampaigns(data);
