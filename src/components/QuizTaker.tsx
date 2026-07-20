@@ -1396,11 +1396,11 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
   const isTimeUrgent = !campaign?.isUntimed && timeRemaining < 120; // less than 2 minutes left
 
   return (
-    <div id="tour-exam-container" className="max-w-4xl mx-auto my-6 grid grid-cols-1 lg:grid-cols-4 gap-6 items-start text-left animate-in fade-in duration-300">
+    <div id="tour-exam-container" className="w-full max-w-6xl xl:max-w-7xl mx-auto my-6 grid grid-cols-1 lg:grid-cols-4 gap-6 items-start text-left px-4 lg:px-0 animate-in fade-in duration-300">
       {/* Sidebar: Navigation Grid & Clock */}
       <div className="lg:col-span-1 space-y-4 lg:sticky lg:top-4 order-last lg:order-first">
-        {/* Floating Timer Card */}
-        <div id="tour-timer-box" className={`p-4 border rounded-2xl shadow-sm flex items-center justify-between transition-all duration-300 ${
+        {/* Floating Timer Card (Visible only on desktop) */}
+        <div id="tour-timer-box" className={`hidden lg:flex p-4 border rounded-2xl shadow-sm items-center justify-between transition-all duration-300 ${
           !campaign?.isUntimed && isTimeUrgent 
             ? "bg-rose-50 border-rose-100 text-rose-800 animate-pulse shadow-rose-100/50" 
             : "bg-white border-slate-100 text-slate-800"
@@ -1452,8 +1452,8 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
             </span>
           </div>
 
-          {/* Flex wrap wrapper with auto dynamic wrapping */}
-          <div className="flex flex-wrap gap-2 justify-start items-center">
+          {/* Dynamically responsive grid for all device sizes to avoid clipping or excessive spacing */}
+          <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-4 xl:grid-cols-5 gap-2 justify-items-center justify-center">
             {shuffledQuestions.map((q, qIndex) => {
               const hasAnswered = answers[q.id] !== undefined;
               const isSelected = currentIdx === qIndex;
@@ -1470,7 +1470,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
                       }
                     }
                   }}
-                  className={`w-10 h-10 !p-0 shrink-0 flex items-center justify-center text-xs font-bold font-mono rounded-full transition-all duration-200 cursor-pointer ${
+                  className={`w-10 h-10 !p-0 flex items-center justify-center text-xs font-bold font-mono rounded-full transition-all duration-200 cursor-pointer ${
                     isSelected
                       ? "bg-[#1D366D] text-white shadow-sm hover:bg-indigo-900"
                       : hasAnswered
@@ -1517,6 +1517,19 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
               ออก
             </button>
           </div>
+        </div>
+
+        {/* Compact Mobile Timer (Visible only on mobile/tablet screens) */}
+        <div id="tour-timer-box-mobile" className="lg:hidden p-4 bg-white border border-slate-100 rounded-2xl shadow-sm flex items-center justify-between transition-all duration-300">
+          <div className="flex items-center gap-2">
+            <Clock className={!campaign?.isUntimed && isTimeUrgent ? "text-rose-600" : "text-[#1D366D]"} size={16} />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              {campaign?.isUntimed ? "เวลาที่ใช้ไป:" : "เวลาที่เหลือ:"}
+            </span>
+          </div>
+          <span className="text-lg font-bold font-mono tracking-tight text-slate-800">
+            {campaign?.isUntimed ? formatTimer(durationUsed) : formatTimer(timeRemaining)}
+          </span>
         </div>
 
         {layoutMode === "scroll" ? (
