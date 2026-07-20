@@ -2393,12 +2393,18 @@ async function startServer() {
 
       // Get the questions for this attempt, or fallback to campaign questions
       let assignedQuestions = [];
+      let finalDurationSeconds = durationSeconds;
       if (attemptId) {
         const db = getCampaignDb(id);
-        const attemptStmt = db.prepare("SELECT questions_json FROM attempts WHERE id = ? AND user_identifier = ?");
+        const attemptStmt = db.prepare("SELECT questions_json, created_at FROM attempts WHERE id = ? AND user_identifier = ?");
         const attempt = attemptStmt.get(attemptId, userIdentifier) as any;
         if (attempt) {
           assignedQuestions = JSON.parse(attempt.questions_json);
+          if (attempt.created_at) {
+            const startTime = new Date(attempt.created_at).getTime();
+            const endTime = new Date().getTime();
+            finalDurationSeconds = Math.max(0, Math.floor((endTime - startTime) / 1000));
+          }
         }
       }
 
@@ -2454,7 +2460,7 @@ async function startServer() {
         correctAnswers,
         passed,
         new Date().toISOString(),
-        durationSeconds || 0,
+        finalDurationSeconds || 0,
         JSON.stringify(answers)
       );
 
@@ -2482,7 +2488,7 @@ async function startServer() {
             correctAnswers,
             passed: passed === 1,
             submittedAt: new Date().toISOString(),
-            durationSeconds: durationSeconds || 0,
+            durationSeconds: finalDurationSeconds || 0,
             answers
           }
         });
