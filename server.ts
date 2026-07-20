@@ -94,6 +94,13 @@ try {
   // Column already exists
 }
 
+// Safe migration for existing installations to add sort_order column
+try {
+  masterDb.exec("ALTER TABLE campaigns ADD COLUMN sort_order INTEGER DEFAULT 0");
+} catch (e) {
+  // Column already exists
+}
+
 // Safe migration for existing installations to add max_attempts column
 try {
   masterDb.exec("ALTER TABLE campaigns ADD COLUMN max_attempts INTEGER DEFAULT 0");
@@ -1151,6 +1158,7 @@ async function startServer() {
       runQuery("ALTER TABLE campaigns ADD COLUMN rule_difficulty TEXT DEFAULT 'all'");
       runQuery("ALTER TABLE campaigns ADD COLUMN rule_count INTEGER DEFAULT 0");
       runQuery("ALTER TABLE campaigns ADD COLUMN target_booklet TEXT DEFAULT ''");
+      runQuery("ALTER TABLE campaigns ADD COLUMN sort_order INTEGER DEFAULT 0");
 
       // Create questions table
       masterDb.exec(`
@@ -1667,7 +1675,7 @@ async function startServer() {
   // API: Get all campaigns
   app.get("/api/campaigns", (req, res) => {
     try {
-      const stmt = masterDb.prepare("SELECT * FROM campaigns ORDER BY created_at DESC");
+      const stmt = masterDb.prepare("SELECT * FROM campaigns ORDER BY sort_order ASC, created_at DESC");
       const rows = stmt.all() as any[];
       const campaigns = rows.map((row) => {
         let questions = [];
@@ -1824,6 +1832,31 @@ async function startServer() {
       broadcastCampaignsChange();
 
       res.status(201).json({ success: true, id });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // API: Reorder campaigns
+  app.put("/api/campaigns/reorder", (req, res) => {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids)) {
+        return res.status(400).json({ error: "Invalid ids list" });
+      }
+
+      const updateStmt = masterDb.prepare("UPDATE campaigns SET sort_order = ? WHERE id = ?");
+      
+      const transaction = masterDb.transaction((idList) => {
+        for (let i = 0; i < idList.length; i++) {
+          updateStmt.run(i, idList[i]);
+        }
+      });
+
+      transaction(ids);
+      broadcastCampaignsChange();
+
+      res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

@@ -8,7 +8,7 @@ import {
   Play, Square, Trash2, Edit, BarChart3, Plus, 
   Link2, Calendar, Clock, CheckCircle, ShieldAlert, 
   Copy, Check, FileText, ChevronRight, ArrowLeft, ArrowRight, Eye, HelpCircle, AlertCircle, Award, RotateCcw, Settings, Search, Layers,
-  ShoppingCart, ShoppingBag, X, Filter, MoreVertical
+  ShoppingCart, ShoppingBag, X, Filter, MoreVertical, GripVertical
 } from "lucide-react";
 
 export default function CampaignManager() {
@@ -44,6 +44,10 @@ export default function CampaignManager() {
   // Dropdown states for admin operations
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
+  // Drag and drop state for campaigns reordering
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       if (openDropdownId) {
@@ -58,6 +62,51 @@ export default function CampaignManager() {
       document.removeEventListener("click", handleOutsideClick);
     };
   }, [openDropdownId]);
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    if (view !== "list") return;
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+    setDragOverIndex(index);
+  };
+
+  const handleDrop = async (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    const newCampaigns = [...campaigns];
+    const draggedItem = newCampaigns[draggedIndex];
+    
+    newCampaigns.splice(draggedIndex, 1);
+    newCampaigns.splice(index, 0, draggedItem);
+    
+    setCampaigns(newCampaigns);
+
+    try {
+      const ids = newCampaigns.map(c => c.id);
+      const res = await fetch("/api/campaigns/reorder", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids })
+      });
+      if (!res.ok) {
+        throw new Error("Failed to save reordered campaigns");
+      }
+    } catch (err: any) {
+      console.error("Reorder failed:", err);
+      fetchCampaigns(true);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
 
   const handleCopyCampaignId = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
