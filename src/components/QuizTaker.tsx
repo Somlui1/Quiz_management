@@ -1422,7 +1422,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
           <div className="grid grid-cols-2 gap-1.5">
             <button
               onClick={() => setLayoutMode("slider")}
-              className={`py-2 px-2 text-[10px] font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+              className={`quiz-control-btn py-2 px-2 text-[10px] font-bold rounded-lg transition-all duration-200 cursor-pointer ${
                 layoutMode === "slider"
                   ? "bg-[#1D366D] text-white shadow-sm"
                   : "bg-slate-50 text-slate-500 hover:bg-slate-100/80"
@@ -1432,7 +1432,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
             </button>
             <button
               onClick={() => setLayoutMode("scroll")}
-              className={`py-2 px-2 text-[10px] font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+              className={`quiz-control-btn py-2 px-2 text-[10px] font-bold rounded-lg transition-all duration-200 cursor-pointer ${
                 layoutMode === "scroll"
                   ? "bg-[#1D366D] text-white shadow-sm"
                   : "bg-slate-50 text-slate-500 hover:bg-slate-100/80"
@@ -1470,7 +1470,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
                       }
                     }
                   }}
-                  className={`w-10 h-10 !p-0 flex items-center justify-center text-xs font-bold font-mono rounded-full transition-all duration-200 cursor-pointer ${
+                  className={`quiz-nav-btn w-10 h-10 !p-0 flex items-center justify-center text-xs font-bold font-mono rounded-full transition-all duration-200 cursor-pointer ${
                     isSelected
                       ? "bg-[#1D366D] text-white shadow-sm hover:bg-indigo-900"
                       : hasAnswered
@@ -1500,7 +1500,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
       {/* Main Panel: Active Question Slider or Scroll list */}
       <div className="lg:col-span-3 space-y-4">
         {/* Exam Title header */}
-        <div className="bg-[#1D366D] text-white p-5 rounded-2xl flex items-center justify-between gap-4 shadow-sm">
+        <div className="bg-[#1D366D] text-white p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm text-center sm:text-left">
           <div>
             <span className="text-[9px] uppercase tracking-wider text-emerald-400 font-bold block mb-0.5">รหัสผู้สอบ: {userIdentifier}</span>
             <h2 className="text-sm font-bold tracking-tight line-clamp-1">{campaign.name}</h2>
@@ -1511,7 +1511,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
             </span>
             <button
               onClick={handleLogout}
-              className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center gap-1"
+              className="quiz-control-btn px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center gap-1"
             >
               <LogOut size={12} />
               ออก
@@ -1549,7 +1549,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
                           handleSelectOption(q.id, option);
                           setCurrentIdx(qIdx);
                         }}
-                        className={`w-full text-left p-4 rounded-xl text-xs font-bold border transition-all duration-200 cursor-pointer flex items-center gap-3 ${
+                        className={`quiz-option-btn w-full text-left p-4 rounded-xl text-xs font-bold border transition-all duration-200 cursor-pointer flex items-center gap-3 ${
                           isChecked
                             ? "bg-[#1D366D] border-[#1D366D] text-white shadow-md ring-2 ring-[#1D366D]/25"
                             : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700 hover:text-slate-900"
@@ -1604,7 +1604,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
                       <button
                         key={oIdx}
                         onClick={() => handleSelectOption(activeQuestion.id, option)}
-                        className={`w-full text-left p-4 rounded-xl text-xs font-bold border transition-all duration-200 cursor-pointer flex items-center gap-3 ${
+                        className={`quiz-option-btn w-full text-left p-4 rounded-xl text-xs font-bold border transition-all duration-200 cursor-pointer flex items-center gap-3 ${
                           isChecked
                             ? "bg-[#1D366D] border-[#1D366D] text-white shadow-md ring-2 ring-[#1D366D]/25"
                             : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700 hover:text-slate-900"

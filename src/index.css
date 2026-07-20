@@ -36,7 +36,9 @@
 }
 
 /* Elements that require custom rounding overrides for Material 3 standard */
-button, button.rounded-none, .btn {
+button:not(.quiz-nav-btn):not(.quiz-option-btn):not(.quiz-control-btn):not(.lobby-sz-btn), 
+button.rounded-none, 
+.btn {
   border-radius: 9999px !important; /* Material 3 fully-rounded pills for buttons */
   padding-left: 1.5rem !important;
   padding-right: 1.5rem !important;
@@ -103,12 +105,13 @@ span.rounded-none, label.rounded-none, [class*="badge"] {
 }
 
 /* Hover elevation transitions */
-button:hover, .hover-elevation:hover {
+button:not(.quiz-nav-btn):not(.quiz-option-btn):not(.quiz-control-btn):hover, 
+.hover-elevation:hover {
   transform: translateY(-2px) !important;
   box-shadow: 0 10px 25px -5px rgba(29, 54, 109, 0.12), 0 8px 16px -6px rgba(29, 54, 109, 0.06) !important;
 }
 
-button:active {
+button:not(.quiz-nav-btn):not(.quiz-option-btn):not(.quiz-control-btn):active {
   transform: translateY(1px) !important;
   box-shadow: 0 4px 10px -3px rgba(29, 54, 109, 0.1) !important;
 }
