@@ -47,6 +47,7 @@ export default function CampaignManager() {
   // Drag and drop state for campaigns reordering
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [dragEnabled, setDragEnabled] = useState(false);
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
