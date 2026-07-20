@@ -2183,8 +2183,8 @@ async function startServer() {
       const maxAttempts = campaign.max_attempts || 0;
 
       const db = getCampaignDb(id);
-      const countStmt = db.prepare("SELECT COUNT(*) as count FROM submissions WHERE user_identifier = ?");
-      const result = countStmt.get(identifier) as any;
+      const countStmt = db.prepare("SELECT COUNT(*) as count FROM submissions WHERE LOWER(user_identifier) = LOWER(?) OR LOWER(em_no) = LOWER(?)");
+      const result = countStmt.get(identifier, identifier) as any;
       const count = result ? result.count : 0;
 
       res.json({
@@ -2375,8 +2375,8 @@ async function startServer() {
 
       if (campaign.max_attempts && campaign.max_attempts > 0) {
         const db = getCampaignDb(id);
-        const countStmt = db.prepare("SELECT COUNT(*) as count FROM submissions WHERE user_identifier = ?");
-        const result = countStmt.get(userIdentifier) as any;
+        const countStmt = db.prepare("SELECT COUNT(*) as count FROM submissions WHERE LOWER(user_identifier) = LOWER(?) OR LOWER(em_no) = LOWER(?)");
+        const result = countStmt.get(userIdentifier, userIdentifier) as any;
         const count = result ? result.count : 0;
         if (count >= campaign.max_attempts) {
           return res.status(403).json({ error: `ท่านสอบครบจำนวนสิทธิ์จำกัดแล้ว (${campaign.max_attempts} ครั้ง) ไม่สามารถส่งผลข้อสอบเพิ่มได้` });

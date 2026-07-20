@@ -755,7 +755,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
 
     const payload = {
       userName: userName.trim(),
-      userIdentifier: userIdentifier.trim(),
+      userIdentifier: userProfile?.emNo || userIdentifier.trim(),
       department: department.trim(),
       surname: userProfile?.surname || "",
       emNo: userProfile?.emNo || userIdentifier.trim(),
