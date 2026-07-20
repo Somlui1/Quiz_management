@@ -193,7 +193,7 @@ export default function BulkUpload({ onImport }: BulkUploadProps) {
 ]`}
               value={jsonText}
               onChange={handleTextChange}
-              className="w-full px-4 py-3 bg-slate-950 text-slate-100 rounded-none border-3 border-black font-mono text-xs focus:outline-none focus:ring-2 focus:ring-aapico-blue no-scrollbar resize-none"
+              className="w-full px-4 py-3 bg-white text-slate-950 rounded-none border-3 border-black font-mono text-xs focus:outline-none focus:ring-2 focus:ring-aapico-blue no-scrollbar resize-none placeholder-slate-400"
             />
           </div>
         </div>

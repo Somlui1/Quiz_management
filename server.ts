@@ -184,208 +184,252 @@ try {
   masterDb.exec("ALTER TABLE questions ADD COLUMN packet_id TEXT DEFAULT ''");
 } catch (e) {}
 
-// Populate default exam packets if empty
+// Seed default exam packet, questions, and active campaign
 try {
-  const pCount = masterDb.prepare("SELECT COUNT(*) as count FROM exam_packets").get() as any;
-  if (pCount && pCount.count === 0) {
-    const insertP = masterDb.prepare("INSERT OR IGNORE INTO exam_packets (id, name, created_at) VALUES (?, ?, ?)");
-    insertP.run("p_ccna", "ชุดข้อสอบข้อมูลเกี่ยวกับ CCNA", new Date().toISOString());
-    insertP.run("p_vm", "ชุดข้อสอบข้อมูลเกี่ยวกับ Basic Virtual Machine", new Date().toISOString());
-    insertP.run("p_general", "ชุดข้อสอบความรู้ทั่วไปด้านไอที", new Date().toISOString());
-  }
-} catch (err) {
-  console.error("Error creating/populating exam_packets table:", err);
-}
+  // Clear existing packets, questions, and campaigns to fulfill requirement: "จัดชุดของให้เหลือเเค่ชุด เดียว พร้อมตั้งห้องสอบให้ข้อสอบชุดนี้"
+  masterDb.prepare("DELETE FROM exam_packets").run();
+  masterDb.prepare("DELETE FROM questions").run();
+  masterDb.prepare("DELETE FROM campaigns").run();
 
-// Check if questions table is empty, if so, populate from default seed list and campaigns
-try {
-  const qCount = masterDb.prepare("SELECT COUNT(*) as count FROM questions").get() as any;
-  if (qCount && qCount.count === 0) {
-    const defaultSeedQs = [
-      {
-        id: "q1",
-        text: "ภาษาใดใช้สำหรับเขียนสไตล์ตกแต่งเว็บเพจให้สวยงาม?",
-        options: ["CSS", "HTML", "JavaScript", "SQL"],
-        correctIndex: 0,
-        explanation: "CSS (Cascading Style Sheets) ใช้สำหรับการระบุสไตล์ เลย์เอาต์ และการตกแต่งการจัดวางองค์ประกอบต่างๆ ของเว็บไซต์",
-        packetId: "p_vm",
-        booklet: "ชุดข้อสอบข้อมูลเกี่ยวกับ Basic Virtual Machine"
-      },
-      {
-        id: "q2",
-        text: "โปรโตคอลใดใช้เพื่อการสื่อสารข้อมูลบนเว็บที่มีความปลอดภัยขั้นสูง (Secure)?",
-        options: ["HTTPS", "HTTP", "FTP", "SMTP"],
-        correctIndex: 0,
-        explanation: "HTTPS (Hypertext Transfer Protocol Secure) ใช้สำหรับรับส่งข้อมูลบนเว็บนบนช่องทางที่มีการเข้ารหัสลับ เพื่อความปลอดภัยสูงสุด",
-        packetId: "p_ccna",
-        booklet: "ชุดข้อสอบข้อมูลเกี่ยวกับ CCNA"
-      },
-      {
-        id: "q3",
-        text: "SQLite เป็นฐานข้อมูลประเภทใด?",
-        options: ["Relational Database (Serverless)", "NoSQL Database", "Graph Database", "Memory-Only Cache"],
-        correctIndex: 0,
-        explanation: "SQLite เป็นระบบจัดการฐานข้อมูลเชิงสัมพันธ์แบบฝังตัว (Serverless / Embedded Relational Database) ที่เก็บข้อมูลลงในไฟล์ไฟล์เดียว",
-        packetId: "p_vm",
-        booklet: "ชุดข้อสอบข้อมูลเกี่ยวกับ Basic Virtual Machine"
-      },
-      {
-        id: "q4",
-        text: "คำว่า IP ในเลข IP Address ย่อมาจากอะไร?",
-        options: ["Internet Protocol", "Intranet Process", "Information Provider", "Internal Program"],
-        correctIndex: 0,
-        explanation: "IP ย่อมาจาก Internet Protocol เป็นข้อกำหนดหรือข้อตกลงในการส่งข้อมูลผ่านเครือข่ายอินเทอร์เน็ต",
-        packetId: "p_ccna",
-        booklet: "ชุดข้อสอบข้อมูลเกี่ยวกับ CCNA"
-      },
-      {
-        id: "q5",
-        text: "ในระบบจัดสอบนี้ SSE ย่อมาจากอะไรและใช้ทำอะไร?",
-        options: ["Server-Sent Events ใช้สำหรับส่งข้อมูลอัปเดตแบบเรียลไทม์จากเซิร์ฟเวอร์", "Simple Socket Engine ใช้เชื่อมต่อพอร์ต 3000", "Secure Shell Encryption สำหรับเข้ารหัสฐานข้อมูล", "System Status Evaluation สำหรับตรวจผลการสอบ"],
-        correctIndex: 0,
-        explanation: "Server-Sent Events (SSE) เป็นเทคโนโลยีเว็บมาตรฐานที่ช่วยให้เซิร์ฟเวอร์สามารถส่งข้อความ/ข้อมูลอัปเดตแบบผลัก (Push Notification) ไปยังเว็บเบราว์เซอร์ได้แบบเรียลไทม์ผ่านการเชื่อมต่อ HTTP เดิม",
-        packetId: "p_ccna",
-        booklet: "ชุดข้อสอบข้อมูลเกี่ยวกับ CCNA"
-      }
-    ];
+  const insertP = masterDb.prepare("INSERT INTO exam_packets (id, name, created_at) VALUES (?, ?, ?)");
+  insertP.run("p_m365", "ชุดข้อสอบ Microsoft 365 & Copilot", new Date().toISOString());
 
-    const insertQ = masterDb.prepare(`
-      INSERT OR IGNORE INTO questions (id, text, options_json, correct_index, explanation, packet_id, booklet)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const insertedIds = new Set<string>();
-    for (const q of defaultSeedQs) {
-      insertQ.run(q.id, q.text, JSON.stringify(q.options), q.correctIndex, q.explanation, q.packetId, q.booklet);
-      insertedIds.add(q.id);
+  const questionsToSeed = [
+    {
+      id: "m365_q1",
+      text: "Microsoft Office 365 มีลักษณะการให้บริการแบบใด?",
+      options: ["บริการระบบคลาวด์แบบสมัครสมาชิก", "ซอฟต์แวร์ซื้อขาดติดตั้งครั้งเดียว", "ฮาร์ดแวร์เซิร์ฟเวอร์ภายในองค์กร", "แอปพลิเคชันฟรีแบบโอเพนซอร์ส"],
+      correctIndex: 0,
+      explanation: "Microsoft 365 (เดิมคือ Office 365) เป็นบริการระบบคลาวด์แบบสมัครสมาชิกจาก Microsoft ที่รวมแอปพลิเคชันชั้นนำและทำงานร่วมกันได้จากทุกอุปกรณ์",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+    },
+    {
+      id: "m365_q2",
+      text: "แนวคิดหลัก \"Copilot ≠ Autopilot\" สื่อถึงสิ่งใด?",
+      options: ["คนยังเป็นกัปตันที่ตรวจสอบและตัดสินใจ", "Copilot ทำงานแทนคนได้ทั้งหมดโดยอัตโนมัติ", "ต้องใช้ Copilot คู่กับระบบขับเคลื่อนอัตโนมัติ", "Copilot ใช้ได้เฉพาะผู้ดูแลระบบเท่านั้น"],
+      correctIndex: 0,
+      explanation: "Copilot ช่วยสร้างร่างงานและวิเคราะห์ แต่คนยังเป็นกัปตันที่ตรวจสอบและตัดสินใจ ไม่ใช่ระบบที่ทำงานแทนทั้งหมด",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+    },
+    {
+      id: "m365_q3",
+      text: "Microsoft 365 Copilot ทำงานในลักษณะใด?",
+      options: ["เป็นผู้ช่วยในแอปที่ใช้ทุกวัน ไม่ใช่ Chatbot แยกต่างหาก", "เป็นแอปพลิเคชันแยกที่ต้องเปิดต่างหากเสมอ", "เป็นเว็บไซต์ที่ต้องเข้าผ่านเบราว์เซอร์เท่านั้น", "เป็นอุปกรณ์ฮาร์ดแวร์เสริม"],
+      correctIndex: 0,
+      explanation: "Copilot ไม่ใช่ Chatbot แยกต่างหาก แต่เป็น \"Copilot\" ที่ฝังอยู่ในแอปที่ใช้ทุกวัน",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+    },
+    {
+      id: "m365_q4",
+      text: "ในด้านความปลอดภัยของข้อมูล Copilot มีหลักการอย่างไร?",
+      options: ["ใช้เฉพาะข้อมูลที่มีสิทธิ์เข้าถึงและไม่ถูกนำไปเทรนโมเดลสาธารณะ", "แชร์ข้อมูลทั้งหมดให้โมเดลสาธารณะเพื่อพัฒนา", "เข้าถึงไฟล์ทุกไฟล์ในองค์กรได้โดยไม่จำกัดสิทธิ์", "เก็บ Prompt ไว้บนเซิร์ฟเวอร์สาธารณะ"],
+      correctIndex: 0,
+      explanation: "ข้อมูลและ Prompt อยู่ภายใต้ขอบเขตความปลอดภัยขององค์กร ใช้เฉพาะข้อมูลที่มีสิทธิ์เข้าถึง และไม่ถูกนำไปเทรนโมเดลสาธารณะ",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+    },
+    {
+      id: "m365_q5",
+      text: "แอปพลิเคชันของ Microsoft 365 ในกลุ่มที่ 1 (เครื่องมือทำงานทั่วไป) ประกอบด้วยอะไรบ้าง?",
+      options: ["Excel, Word, PowerPoint, OneNote", "Outlook, Teams, OneDrive, SharePoint", "Word, Outlook, Teams, OneDrive", "Excel, Teams, OneNote, OneDrive"],
+      correctIndex: 0,
+      explanation: "กลุ่มที่ 1 OFFICE เป็นเครื่องมือสำหรับงานทั่วไป ได้แก่ Excel, Word, PowerPoint และ OneNote",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+    },
+    {
+      id: "m365_q6",
+      text: "ในโครงสร้างของ Excel \"เซลล์ (Cell)\" หมายถึงอะไร?",
+      options: ["จุดตัดของแถวและคอลัมน์ เช่น B2", "แนวตั้งทั้งหมดของตาราง", "แนวนอนทั้งหมดของตาราง", "ชื่อของชีตงาน"],
+      correctIndex: 0,
+      explanation: "เซลล์ (Cell) คือจุดตัดของแถว (Row) และคอลัมน์ (Column) เช่น B2",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+    },
+    {
+      id: "m365_q7",
+      text: "ฟีเจอร์ Flash Fill ใน Excel ใช้ทำสิ่งใด?",
+      options: ["เติมข้อมูลอัตโนมัติตามรูปแบบที่พิมพ์เป็นตัวอย่าง", "สร้างกราฟและแดชบอร์ดอัตโนมัติ", "เฝ้าดูค่าของเซลล์จากหลายชีต", "ป้องกันไฟล์ด้วยรหัสผ่าน"],
+      correctIndex: 0,
+      explanation: "Flash Fill ตรวจจับรูปแบบจากตัวอย่างที่พิมพ์ แล้วเติมข้อมูลที่เหลือทั้งคอลัมน์ให้อัตโนมัติ โดยไม่ต้องเขียนสูตร",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+    },
+    {
+      id: "m365_q8",
+      text: "ปุ่มลัดใดใช้สั่งให้ Flash Fill เติมข้อมูลทั้งคอลัมน์ทันที?",
+      options: ["Ctrl + E", "Ctrl + N", "Ctrl + S", "Ctrl + P"],
+      correctIndex: 0,
+      explanation: "กด Ctrl + E เพื่อให้ Excel เติมข้อมูลที่เหลือทั้งคอลัมน์ด้วย Flash Fill ทันที",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+    },
+    {
+      id: "m365_q9",
+      text: "ฟีเจอร์ Watch Window ใน Excel มีประโยชน์อย่างไร?",
+      options: ["เฝ้าดูค่าของเซลล์สำคัญจากทุกชีตได้ในหน้าต่างเดียว", "แก้ไขค่าของเซลล์จากหลายไฟล์พร้อมกัน", "แปลงข้อมูลเป็นกราฟอัตโนมัติ", "ล็อกเซลล์ไม่ให้ผู้อื่นแก้ไข"],
+      correctIndex: 0,
+      explanation: "Watch Window ช่วยเฝ้าดูค่าและสูตรของเซลล์สำคัญจากทุกชีตแบบเรียลไทม์ในหน้าต่างเดียว แต่ใช้ดูค่าเท่านั้น แก้ไขไม่ได้",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+    },
+    {
+      id: "m365_q10",
+      text: "ฟีเจอร์ Compare Documents ใน Word ทำหน้าที่ใด?",
+      options: ["เปรียบเทียบเอกสารสองฉบับเพื่อดูความแตกต่าง", "รวมเอกสารหลายไฟล์เป็นไฟล์เดียว", "แปลงเอกสารเป็นไฟล์ PDF", "ตรวจสอบการสะกดคำอัตโนมัติ"],
+      correctIndex: 0,
+      explanation: "Compare Documents เปรียบเทียบไฟล์ต้นฉบับกับฉบับแก้ไขแบบคำต่อคำ แล้วสร้างเอกสารใหม่แสดงความต่างผ่านมุมมอง Track Changes",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+    },
+    {
+      id: "m365_q11",
+      text: "เมื่อใช้ Compare Documents ใน Word ผลลัพธ์จะแสดงในรูปแบบใด?",
+      options: ["เอกสารฉบับใหม่ที่แสดงความต่างแบบ Track Changes", "เขียนทับไฟล์ต้นฉบับทันที", "ไฟล์ Excel สรุปความแตกต่าง", "อีเมลแจ้งเตือนผู้เขียน"],
+      correctIndex: 0,
+      explanation: "ระบบสร้างเอกสารฉบับที่ 3 ขึ้นใหม่เพื่อไม่ให้กระทบไฟล์เดิม และแสดงความแตกต่างทั้งหมดผ่านมุมมอง Track Changes",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+    },
+    {
+      id: "m365_q12",
+      text: "ฟีเจอร์ Design Suggestions (Designer) ใน PowerPoint ช่วยเรื่องใด?",
+      options: ["ช่วยออกแบบและจัดวางสไลด์ให้สวยงามโดยอัตโนมัติ", "แปลภาษาข้อความในสไลด์", "บันทึกเสียงบรรยายอัตโนมัติ", "บีบอัดขนาดไฟล์งานนำเสนอ"],
+      correctIndex: 0,
+      explanation: "Design Suggestions ให้ PowerPoint ช่วยแนะนำการจัดวางและออกแบบสไลด์ให้สวยงามอัตโนมัติในไม่กี่วินาที ผ่านแถบ Designer",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+    },
+    {
+      id: "m365_q13",
+      text: "ฟีเจอร์ Reuse Slides ใน PowerPoint ทำสิ่งใด?",
+      options: ["นำสไลด์จากไฟล์งานนำเสนออื่นมาใช้ซ้ำได้ทันที", "ทำซ้ำสไลด์เดิมภายในไฟล์เดียว", "ล้างการจัดรูปแบบของสไลด์", "แปลงสไลด์เป็นวิดีโอ"],
+      correctIndex: 0,
+      explanation: "Reuse Slides ช่วยนำสไลด์จากไฟล์งานนำเสนออื่นมาใช้ซ้ำได้ทันที โดยเลือกติ๊ก Keep source formatting เพื่อคงดีไซน์เดิมได้",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+    },
+    {
+      id: "m365_q14",
+      text: "OneNote จัดโครงสร้างการบันทึกในรูปแบบใด?",
+      options: ["สมุด (Notebook) → หมวดหมู่ (Section) → หน้า (Page)", "โฟลเดอร์ → ไฟล์ → ชีต", "ทีม → ช่อง → ข้อความ", "ไดรฟ์ → โฟลเดอร์ → ลิงก์"],
+      correctIndex: 0,
+      explanation: "OneNote จัดโครงสร้างแบบยืดหยุ่นโดยแบ่งเป็นสมุด (Notebook), หมวดหมู่ (Section) และหน้า (Page)",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+    },
+    {
+      id: "m365_q15",
+      text: "ฟีเจอร์ Search Across Notebooks ใน OneNote ทำอะไรได้?",
+      options: ["ค้นหาข้อมูลข้ามทุกสมุดบันทึกได้ในคลิกเดียว", "แปลงบันทึกเป็นไฟล์ PDF", "ซิงค์บันทึกกับ Excel", "ล็อกสมุดบันทึกด้วยรหัสผ่าน"],
+      correctIndex: 0,
+      explanation: "Search Across Notebooks ช่วยค้นหาคำสำคัญข้ามทุกสมุดบันทึกพร้อมกัน โดยเลือกขอบเขตเป็น All Notebooks",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+    },
+    {
+      id: "m365_q16",
+      text: "แอปในกลุ่มที่ 2 (อีเมลและการประสานงานหลัก) คือแอปใด?",
+      options: ["Outlook และ Teams", "Excel และ Word", "OneNote และ OneDrive", "PowerPoint และ Excel"],
+      correctIndex: 0,
+      explanation: "กลุ่มที่ 2 เป็นแอปสำหรับอีเมลและการประสานงานหลัก ได้แก่ Outlook และ Microsoft Teams",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+    },
+    {
+      id: "m365_q17",
+      text: "ฟีเจอร์ Focused Inbox ใน Outlook ทำหน้าที่ใด?",
+      options: ["แยกอีเมลสำคัญออกจากอีเมลทั่วไปโดยอัตโนมัติ", "ลบอีเมลขยะทิ้งถาวรทันที", "แปลอีเมลเป็นภาษาอื่น", "เข้ารหัสอีเมลทุกฉบับ"],
+      correctIndex: 0,
+      explanation: "Focused Inbox ช่วยให้ Outlook แยกอีเมลสำคัญออกจากอีเมลทั่วไปโดยอัตโนมัติ",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+    },
+    {
+      id: "m365_q18",
+      text: "\"ผู้ช่วยจัดตารางเวลา (Scheduling Assistant)\" ใน Outlook ใช้ทำสิ่งใด?",
+      options: ["ดูช่วงเวลาที่ผู้เข้าร่วมทุกคนว่างตรงกัน", "ตอบอีเมลอัตโนมัติแทนผู้ใช้", "จัดเรียงอีเมลตามหมวดหมู่สี", "บันทึกการประชุมเป็นข้อความ"],
+      correctIndex: 0,
+      explanation: "Scheduling Assistant ช่วยตรวจสอบเวลาว่างของผู้เข้าร่วม เพื่อหาช่วงเวลาที่ทุกคนว่างตรงกันในการนัดประชุม",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+    },
+    {
+      id: "m365_q19",
+      text: "ใน Microsoft Teams การจัดกลุ่มการทำงานตามโครงการหรือแผนกใช้สิ่งใด?",
+      options: ["ทีม (Teams) และช่อง (Channels)", "โฟลเดอร์และไฟล์", "สมุดและหน้า", "ป้ายและหมวดหมู่สี"],
+      correctIndex: 0,
+      explanation: "Teams จัดกลุ่มการทำงานเป็นทีม (Team) และแบ่งช่อง (Channel) ตามโครงการ แผนก หรือหัวข้องาน",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+    },
+    {
+      id: "m365_q20",
+      text: "ฟีเจอร์ Version History ใน OneDrive มีประโยชน์อย่างไร?",
+      options: ["ย้อนดูและกู้คืนไฟล์เวอร์ชันก่อนหน้าได้ทุกเมื่อ", "ลบไฟล์เก่าทิ้งอัตโนมัติเพื่อประหยัดพื้นที่", "แปลงไฟล์เป็นรูปแบบอื่น", "จำกัดจำนวนคนที่แก้ไขไฟล์"],
+      correctIndex: 0,
+      explanation: "Version History ช่วยแสดงเวอร์ชันย้อนหลังพร้อมวันที่ เวลา และผู้แก้ไข ทำให้เปรียบเทียบและกู้คืนไฟล์เวอร์ชันก่อนหน้าได้ทุกเมื่อ",
+      packetId: "p_m365",
+      booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
     }
+  ];
 
-    const campaignsList = masterDb.prepare("SELECT questions_json FROM campaigns").all() as any[];
-    for (const row of campaignsList) {
-      try {
-        const qs = JSON.parse(row.questions_json);
-        if (Array.isArray(qs)) {
-          for (const q of qs) {
-            if (q && q.text && q.id && !insertedIds.has(q.id)) {
-              insertQ.run(
-                q.id,
-                q.text,
-                JSON.stringify(q.options || []),
-                typeof q.correctIndex === "number" ? q.correctIndex : 0,
-                q.explanation || "",
-                "p_general",
-                "ชุดข้อสอบความรู้ทั่วไปด้านไอที"
-              );
-              insertedIds.add(q.id);
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Migration seed error:", err);
-      }
-    }
+  const insertQ = masterDb.prepare(`
+    INSERT INTO questions (id, text, options_json, correct_index, explanation, packet_id, booklet)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  for (const q of questionsToSeed) {
+    insertQ.run(q.id, q.text, JSON.stringify(q.options), q.correctIndex, q.explanation, q.packetId, q.booklet);
   }
 
-  // Ensure ALL questions (even if table existed) have booklet & packet_id values set if they were empty
-  try {
-    masterDb.exec(`
-      UPDATE questions SET packet_id = 'p_vm', booklet = 'ชุดข้อสอบข้อมูลเกี่ยวกับ Basic Virtual Machine' WHERE id IN ('q1', 'q3') AND (packet_id IS NULL OR packet_id = '');
-      UPDATE questions SET packet_id = 'p_ccna', booklet = 'ชุดข้อสอบข้อมูลเกี่ยวกับ CCNA' WHERE id IN ('q2', 'q4', 'q5') AND (packet_id IS NULL OR packet_id = '');
-      UPDATE questions SET packet_id = 'p_general', booklet = 'ชุดข้อสอบความรู้ทั่วไปด้านไอที' WHERE (packet_id IS NULL OR packet_id = '');
-    `);
-  } catch (err) {
-    console.error("Failed to run safety booklet/packet updater:", err);
-  }
+  // Insert active campaign (room)
+  const insertStmt = masterDb.prepare(`
+    INSERT OR REPLACE INTO campaigns (
+      id, name, group_name, status, start_time, end_time, passing_percentage, 
+      time_limit_minutes, total_questions_to_test, max_attempts, results_display_mode, 
+      randomization_mode, questions_json, question_selection_mode, manual_question_ids_json, 
+      rule_category, rule_difficulty, rule_count, target_booklet, created_at, updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  insertStmt.run(
+    "demo-quiz",
+    "ห้องสอบ Microsoft 365 & Copilot",
+    "ห้องสอบพนักงาน (Employee Exam)",
+    "ACTIVE",
+    null,
+    null,
+    60,
+    20,
+    20,
+    3,
+    "full",
+    "static",
+    JSON.stringify(questionsToSeed.map(q => ({
+      id: q.id,
+      text: q.text,
+      options: q.options,
+      correctIndex: q.correctIndex,
+      explanation: q.explanation
+    }))),
+    "manual",
+    JSON.stringify(questionsToSeed.map(q => q.id)),
+    "",
+    "all",
+    0,
+    "ชุดข้อสอบ Microsoft 365 & Copilot",
+    new Date().toISOString(),
+    new Date().toISOString()
+  );
+
+  console.log("Database initialized successfully with exactly 1 Microsoft 365 & Copilot packet and 1 Active Campaign room.");
 } catch (err) {
-  console.error("Error migrating/seeding questions table:", err);
-}
-
-// Seed initial data if campaigns is empty or demo-quiz is outdated
-try {
-  const checkDemoStmt = masterDb.prepare("SELECT * FROM campaigns WHERE id = ?");
-  const demoCampaign = checkDemoStmt.get("demo-quiz") as any;
-  
-  let needsSeed = false;
-  if (!demoCampaign) {
-    needsSeed = true;
-  } else {
-    // Check if the seeded questions are outdated (i.e. do not use correctIndex)
-    try {
-      const qList = JSON.parse(demoCampaign.questions_json);
-      if (qList.length > 0 && typeof qList[0].correctIndex === "undefined") {
-        needsSeed = true;
-        // Delete outdated campaign to overwrite it
-        masterDb.prepare("DELETE FROM campaigns WHERE id = ?").run("demo-quiz");
-      }
-    } catch (e) {
-      needsSeed = true;
-    }
-  }
-
-  if (needsSeed) {
-    const seedQuestions = [
-      {
-        id: "q1",
-        text: "ภาษาใดใช้สำหรับเขียนสไตล์ตกแต่งเว็บเพจให้สวยงาม?",
-        options: ["CSS", "HTML", "JavaScript", "SQL"],
-        correctIndex: 0,
-        explanation: "CSS (Cascading Style Sheets) ใช้สำหรับการระบุสไตล์ เลย์เอาต์ และการตกแต่งการจัดวางองค์ประกอบต่างๆ ของเว็บไซต์"
-      },
-      {
-        id: "q2",
-        text: "โปรโตคอลใดใช้เพื่อการสื่อสารข้อมูลบนเว็บที่มีความปลอดภัยขั้นสูง (Secure)?",
-        options: ["HTTPS", "HTTP", "FTP", "SMTP"],
-        correctIndex: 0,
-        explanation: "HTTPS (Hypertext Transfer Protocol Secure) ใช้สำหรับรับส่งข้อมูลบนเว็บบนช่องทางที่มีการเข้ารหัสลับ เพื่อความปลอดภัยสูงสุด"
-      },
-      {
-        id: "q3",
-        text: "SQLite เป็นฐานข้อมูลประเภทใด?",
-        options: ["Relational Database (Serverless)", "NoSQL Database", "Graph Database", "Memory-Only Cache"],
-        correctIndex: 0,
-        explanation: "SQLite เป็นระบบจัดการฐานข้อมูลเชิงสัมพันธ์แบบฝังตัว (Serverless / Embedded Relational Database) ที่เก็บข้อมูลลงในไฟล์ไฟล์เดียว"
-      },
-      {
-        id: "q4",
-        text: "คำว่า IP ในเลข IP Address ย่อมาจากอะไร?",
-        options: ["Internet Protocol", "Intranet Process", "Information Provider", "Internal Program"],
-        correctIndex: 0,
-        explanation: "IP ย่อมาจาก Internet Protocol เป็นข้อกำหนดหรือข้อตกลงในการส่งข้อมูลผ่านเครือข่ายอินเทอร์เน็ต"
-      },
-      {
-        id: "q5",
-        text: "ในระบบจัดสอบนี้ SSE ย่อมาจากอะไรและใช้ทำอะไร?",
-        options: ["Server-Sent Events ใช้สำหรับส่งข้อมูลอัปเดตแบบเรียลไทม์จากเซิร์ฟเวอร์", "Simple Socket Engine ใช้เชื่อมต่อพอร์ต 3000", "Secure Shell Encryption สำหรับเข้ารหัสฐานข้อมูล", "System Status Evaluation สำหรับตรวจผลการสอบ"],
-        correctIndex: 0,
-        explanation: "Server-Sent Events (SSE) เป็นเทคโนโลยีเว็บมาตรฐานที่ช่วยให้เซิร์ฟเวอร์สามารถส่งข้อความ/ข้อมูลอัปเดตแบบผลัก (Push Notification) ไปยังเว็บเบราว์เซอร์ได้แบบเรียลไทม์ผ่านการเชื่อมต่อ HTTP เดิม"
-      }
-    ];
-
-    const insertStmt = masterDb.prepare(`
-      INSERT OR REPLACE INTO campaigns (id, name, group_name, status, start_time, end_time, passing_percentage, time_limit_minutes, total_questions_to_test, max_attempts, results_display_mode, randomization_mode, questions_json, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    insertStmt.run(
-      "demo-quiz",
-      "แบบทดสอบความรู้ทั่วไปด้านไอทีและเทคโนโลยี (Demo Tech Quiz)",
-      "ทีมงานรุ่นใหม่ (Gen Z Tech Team)",
-      "DRAFT",
-      null,
-      null,
-      60,
-      10,
-      3,
-      2,
-      "full",
-      "fully_random",
-      JSON.stringify(seedQuestions),
-      new Date().toISOString()
-    );
-    console.log("Successfully seeded/updated demo campaign 'demo-quiz'!");
-  }
-} catch (err) {
-  console.error("Failed to seed database:", err);
+  console.error("Error initializing Microsoft 365 database seed:", err);
 }
 
 // Cache of campaign-specific database connections
@@ -676,29 +720,37 @@ async function startServer() {
         }
       };
 
-      const isTestAccount = /^TEST100011(1[1-9]|2[0-1])$/.test(upperId);
-      if (isTestAccount && password === "1234") {
-        authenticatedUser = {
-          employeeId: upperId,
-          empNo: upperId.replace("TEST", ""),
-          firstName: "ทดสอบ",
-          lastName: upperId,
-          fullNameEn: `Mock Test ${upperId}`,
-          idCard: "0000000000000",
-          birthDate: "2000-01-01",
-          company: "TEST",
-          department: "TEST-Department",
+      // Generate 10 mock accounts TEST10001111 - TEST10001120 for production/testing
+      for (let i = 11; i <= 20; i++) {
+        const username = `TEST100011${i}`;
+        mockUsers[username] = {
+          employeeId: username,
+          empNo: `100011${i}`,
+          firstName: `ผู้ทดสอบ ${i}`,
+          lastName: "ระบบสอบ SmartEval",
+          fullNameEn: `Tester ${i} SmartEval`,
+          idCard: `31000000011${i}`,
+          birthDate: `1999-01-${i}`,
+          company: "AAPICO",
+          department: "IT-96-Indirect (แผนกไอที)",
           startDate: "2026-01-01",
-          payrollEnabled: false,
-          authUserId: 99000 + parseInt(upperId.substring(10)),
-          username: upperId,
-          name: "ทดสอบ",
-          surname: upperId,
-          emNo: upperId,
-          em_no: upperId,
-          companyEmail: `${upperId.toLowerCase()}@example.com`
+          payrollEnabled: true,
+          authUserId: 20000 + i,
+          username: username,
+          name: `ผู้ทดสอบ ${i}`,
+          surname: "ระบบสอบ SmartEval",
+          emNo: username,
+          em_no: username,
+          companyEmail: `test100011${i}@aapico.com`
         };
-      } else if (mockUsers[upperId] && password === "123456") {
+      }
+
+      const isTestMockUser = upperId.startsWith("TEST100011") && parseInt(upperId.slice(-2)) >= 11 && parseInt(upperId.slice(-2)) <= 20;
+
+      if (mockUsers[upperId] && (password === "123456" || (isTestMockUser && password === "1234"))) {
+        if (process.env.NODE_ENV === "production" && !isTestMockUser) {
+          return res.status(403).json({ error: "ไม่อนุญาตให้ใช้บัญชีทดสอบในสภาพแวดล้อมจริง (Production Environment) กรุณาเข้าสู่ระบบด้วยบัญชีพนักงานจริงของคุณผ่านระบบ Live ESS API" });
+        }
         authenticatedUser = { ...mockUsers[upperId] };
       } else {
         // Step 1: Authenticate against /auth/local
@@ -850,17 +902,21 @@ async function startServer() {
         }
       };
 
-      const isTestAccount = /^TEST100011(1[1-9]|2[0-1])$/.test(upperId);
-      if (isTestAccount) {
-        return res.json({
-          found: true,
-          user: {
-            employeeId: upperId,
-            name: `ทดสอบ ${upperId}`,
-            department: "TEST-Department (แผนกทดสอบ)",
-          }
-        });
-      } else if (mockUsers[upperId]) {
+      for (let i = 11; i <= 20; i++) {
+        const username = `TEST100011${i}`;
+        mockUsers[username] = {
+          employeeId: username,
+          name: `ผู้ทดสอบ ${i} ระบบสอบ SmartEval`,
+          department: "IT-96-Indirect (แผนกไอที)",
+        };
+      }
+
+      const isTestMockUser = upperId.startsWith("TEST100011") && parseInt(upperId.slice(-2)) >= 11 && parseInt(upperId.slice(-2)) <= 20;
+
+      if (mockUsers[upperId]) {
+        if (process.env.NODE_ENV === "production" && !isTestMockUser) {
+          return res.json({ found: false, message: "ไม่อนุญาตให้ดึงข้อมูลบัญชีผู้ใช้จำลองในโหมดใช้งานจริง (Production)" });
+        }
         return res.json({ found: true, user: mockUsers[upperId] });
       }
 
@@ -1156,56 +1212,189 @@ async function startServer() {
 
       // Seed packets
       const insertP = masterDb.prepare("INSERT OR IGNORE INTO exam_packets (id, name, created_at) VALUES (?, ?, ?)");
-      insertP.run("p_ccna", "ชุดข้อสอบข้อมูลเกี่ยวกับ CCNA", new Date().toISOString());
-      insertP.run("p_vm", "ชุดข้อสอบข้อมูลเกี่ยวกับ Basic Virtual Machine", new Date().toISOString());
-      insertP.run("p_general", "ชุดข้อสอบความรู้ทั่วไปด้านไอที", new Date().toISOString());
+      insertP.run("p_m365", "ชุดข้อสอบ Microsoft 365 & Copilot", new Date().toISOString());
 
       // Seed default questions
       const seedQuestions = [
         {
-          id: "q1",
-          text: "ภาษาใดใช้สำหรับเขียนสไตล์ตกแต่งเว็บเพจให้สวยงาม?",
-          options: ["CSS", "HTML", "JavaScript", "SQL"],
+          id: "m365_q1",
+          text: "Microsoft Office 365 มีลักษณะการให้บริการแบบใด?",
+          options: ["บริการระบบคลาวด์แบบสมัครสมาชิก", "ซอฟต์แวร์ซื้อขาดติดตั้งครั้งเดียว", "ฮาร์ดแวร์เซิร์ฟเวอร์ภายในองค์กร", "แอปพลิเคชันฟรีแบบโอเพนซอร์ส"],
           correctIndex: 0,
-          explanation: "CSS (Cascading Style Sheets) ใช้สำหรับการระบุสไตล์ เลย์เอาต์ และการตกแต่งการจัดวางองค์ประกอบต่างๆ ของเว็บไซต์",
-          packetId: "p_vm",
-          booklet: "ชุดข้อสอบข้อมูลเกี่ยวกับ Basic Virtual Machine"
+          explanation: "Microsoft 365 (เดิมคือ Office 365) เป็นบริการระบบคลาวด์แบบสมัครสมาชิกจาก Microsoft ที่รวมแอปพลิเคชันชั้นนำและทำงานร่วมกันได้จากทุกอุปกรณ์",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
         },
         {
-          id: "q2",
-          text: "โปรโตคอลใดใช้เพื่อการสื่อสารข้อมูลบนเว็บที่มีความปลอดภัยขั้นสูง (Secure)?",
-          options: ["HTTPS", "HTTP", "FTP", "SMTP"],
+          id: "m365_q2",
+          text: "แนวคิดหลัก \"Copilot ≠ Autopilot\" สื่อถึงสิ่งใด?",
+          options: ["คนยังเป็นกัปตันที่ตรวจสอบและตัดสินใจ", "Copilot ทำงานแทนคนได้ทั้งหมดโดยอัตโนมัติ", "ต้องใช้ Copilot คู่กับระบบขับเคลื่อนอัตโนมัติ", "Copilot ใช้ได้เฉพาะผู้ดูแลระบบเท่านั้น"],
           correctIndex: 0,
-          explanation: "HTTPS (Hypertext Transfer Protocol Secure) ใช้สำหรับรับส่งข้อมูลบนเว็บบนช่องทางที่มีการเข้ารหัสลับ เพื่อความปลอดภัยสูงสุด",
-          packetId: "p_ccna",
-          booklet: "ชุดข้อสอบข้อมูลเกี่ยวกับ CCNA"
+          explanation: "Copilot ช่วยสร้างร่างงานและวิเคราะห์ แต่คนยังเป็นกัปตันที่ตรวจสอบและตัดสินใจ ไม่ใช่ระบบที่ทำงานแทนทั้งหมด",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
         },
         {
-          id: "q3",
-          text: "SQLite เป็นฐานข้อมูลประเภทใด?",
-          options: ["Relational Database (Serverless)", "NoSQL Database", "Graph Database", "Memory-Only Cache"],
+          id: "m365_q3",
+          text: "Microsoft 365 Copilot ทำงานในลักษณะใด?",
+          options: ["เป็นผู้ช่วยในแอปที่ใช้ทุกวัน ไม่ใช่ Chatbot แยกต่างหาก", "เป็นแอปพลิเคชันแยกที่ต้องเปิดต่างหากเสมอ", "เป็นเว็บไซต์ที่ต้องเข้าผ่านเบราว์เซอร์เท่านั้น", "เป็นอุปกรณ์ฮาร์ดแวร์เสริม"],
           correctIndex: 0,
-          explanation: "SQLite เป็นระบบจัดการฐานข้อมูลเชิงสัมพันธ์แบบฝังตัว (Serverless / Embedded Relational Database) ที่เก็บข้อมูลลงในไฟล์ไฟล์เดียว",
-          packetId: "p_vm",
-          booklet: "ชุดข้อสอบข้อมูลเกี่ยวกับ Basic Virtual Machine"
+          explanation: "Copilot ไม่ใช่ Chatbot แยกต่างหาก แต่เป็น \"Copilot\" ที่ฝังอยู่ในแอปที่ใช้ทุกวัน",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
         },
         {
-          id: "q4",
-          text: "คำว่า IP ในเลข IP Address ย่อมาจากอะไร?",
-          options: ["Internet Protocol", "Intranet Process", "Information Provider", "Internal Program"],
+          id: "m365_q4",
+          text: "ในด้านความปลอดภัยของข้อมูล Copilot มีหลักการอย่างไร?",
+          options: ["ใช้เฉพาะข้อมูลที่มีสิทธิ์เข้าถึงและไม่ถูกนำไปเทรนโมเดลสาธารณะ", "แชร์ข้อมูลทั้งหมดให้โมเดลสาธารณะเพื่อพัฒนา", "เข้าถึงไฟล์ทุกไฟล์ในองค์กรได้โดยไม่จำกัดสิทธิ์", "เก็บ Prompt ไว้บนเซิร์ฟเวอร์สาธารณะ"],
           correctIndex: 0,
-          explanation: "IP ย่อมาจาก Internet Protocol เป็นข้อกำหนดหรือข้อตกลงในการส่งข้อมูลผ่านเครือข่ายอินเทอร์เน็ต",
-          packetId: "p_ccna",
-          booklet: "ชุดข้อสอบข้อมูลเกี่ยวกับ CCNA"
+          explanation: "ข้อมูลและ Prompt อยู่ภายใต้ขอบเขตความปลอดภัยขององค์กร ใช้เฉพาะข้อมูลที่มีสิทธิ์เข้าถึง และไม่ถูกนำไปเทรนโมเดลสาธารณะ",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
         },
         {
-          id: "q5",
-          text: "ในระบบจัดสอบนี้ SSE ย่อมาจากอะไรและใช้ทำอะไร?",
-          options: ["Server-Sent Events ใช้สำหรับส่งข้อมูลอัปเดตแบบเรียลไทม์จากเซิร์ฟเวอร์", "Simple Socket Engine ใช้เชื่อมต่อพอร์ต 3000", "Secure Shell Encryption สำหรับเข้ารหัสฐานข้อมูล", "System Status Evaluation สำหรับตรวจผลการสอบ"],
+          id: "m365_q5",
+          text: "แอปพลิเคชันของ Microsoft 365 ในกลุ่มที่ 1 (เครื่องมือทำงานทั่วไป) ประกอบด้วยอะไรบ้าง?",
+          options: ["Excel, Word, PowerPoint, OneNote", "Outlook, Teams, OneDrive, SharePoint", "Word, Outlook, Teams, OneDrive", "Excel, Teams, OneNote, OneDrive"],
           correctIndex: 0,
-          explanation: "Server-Sent Events (SSE) เป็นเทคโนโลยีเว็บมาตรฐานที่ช่วยให้เซิร์ฟเวอร์สามารถส่งข้อความ/ข้อมูลอัปเดตแบบผลัก (Push Notification) ไปยังเว็บเบราว์เซอร์ได้แบบเรียลไทม์ผ่านการเชื่อมต่อ HTTP เดิม",
-          packetId: "p_ccna",
-          booklet: "ชุดข้อสอบข้อมูลเกี่ยวกับ CCNA"
+          explanation: "กลุ่มที่ 1 OFFICE เป็นเครื่องมือสำหรับงานทั่วไป ได้แก่ Excel, Word, PowerPoint และ OneNote",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+        },
+        {
+          id: "m365_q6",
+          text: "ในโครงสร้างของ Excel \"เซลล์ (Cell)\" หมายถึงอะไร?",
+          options: ["จุดตัดของแถวและคอลัมน์ เช่น B2", "แนวตั้งทั้งหมดของตาราง", "แนวนอนทั้งหมดของตาราง", "ชื่อของชีตงาน"],
+          correctIndex: 0,
+          explanation: "เซลล์ (Cell) คือจุดตัดของแถว (Row) และคอลัมน์ (Column) เช่น B2",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+        },
+        {
+          id: "m365_q7",
+          text: "ฟีเจอร์ Flash Fill ใน Excel ใช้ทำสิ่งใด?",
+          options: ["เติมข้อมูลอัตโนมัติตามรูปแบบที่พิมพ์เป็นตัวอย่าง", "สร้างกราฟและแดชบอร์ดอัตโนมัติ", "เฝ้าดูค่าของเซลล์จากหลายชีต", "ป้องกันไฟล์ด้วยรหัสผ่าน"],
+          correctIndex: 0,
+          explanation: "Flash Fill ตรวจจับรูปแบบจากตัวอย่างที่พิมพ์ แล้วเติมข้อมูลที่เหลือทั้งคอลัมน์ให้อัตโนมัติ โดยไม่ต้องเขียนสูตร",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+        },
+        {
+          id: "m365_q8",
+          text: "ปุ่มลัดใดใช้สั่งให้ Flash Fill เติมข้อมูลทั้งคอลัมน์ทันที?",
+          options: ["Ctrl + E", "Ctrl + N", "Ctrl + S", "Ctrl + P"],
+          correctIndex: 0,
+          explanation: "กด Ctrl + E เพื่อให้ Excel เติมข้อมูลที่เหลือทั้งคอลัมน์ด้วย Flash Fill ทันที",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+        },
+        {
+          id: "m365_q9",
+          text: "ฟีเจอร์ Watch Window ใน Excel มีประโยชน์อย่างไร?",
+          options: ["เฝ้าดูค่าของเซลล์สำคัญจากทุกชีตได้ในหน้าต่างเดียว", "แก้ไขค่าของเซลล์จากหลายไฟล์พร้อมกัน", "แปลงข้อมูลเป็นกราฟอัตโนมัติ", "ล็อกเซลล์ไม่ให้ผู้อื่นแก้ไข"],
+          correctIndex: 0,
+          explanation: "Watch Window ช่วยเฝ้าดูค่าและสูตรของเซลล์สำคัญจากทุกชีตแบบเรียลไทม์ในหน้าต่างเดียว แต่ใช้ดูค่าเท่านั้น แก้ไขไม่ได้",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+        },
+        {
+          id: "m365_q10",
+          text: "ฟีเจอร์ Compare Documents ใน Word ทำหน้าที่ใด?",
+          options: ["เปรียบเทียบเอกสารสองฉบับเพื่อดูความแตกต่าง", "รวมเอกสารหลายไฟล์เป็นไฟล์เดียว", "แปลงเอกสารเป็นไฟล์ PDF", "ตรวจสอบการสะกดคำอัตโนมัติ"],
+          correctIndex: 0,
+          explanation: "Compare Documents เปรียบเทียบไฟล์ต้นฉบับกับฉบับแก้ไขแบบคำต่อคำ แล้วสร้างเอกสารใหม่แสดงความต่างผ่านมุมมอง Track Changes",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+        },
+        {
+          id: "m365_q11",
+          text: "เมื่อใช้ Compare Documents ใน Word ผลลัพธ์จะแสดงในรูปแบบใด?",
+          options: ["เอกสารฉบับใหม่ที่แสดงความต่างแบบ Track Changes", "เขียนทับไฟล์ต้นฉบับทันที", "ไฟล์ Excel สรุปความแตกต่าง", "อีเมลแจ้งเตือนผู้เขียน"],
+          correctIndex: 0,
+          explanation: "ระบบสร้างเอกสารฉบับที่ 3 ขึ้นใหม่เพื่อไม่ให้กระทบไฟล์เดิม และแสดงความแตกต่างทั้งหมดผ่านมุมมอง Track Changes",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+        },
+        {
+          id: "m365_q12",
+          text: "ฟีเจอร์ Design Suggestions (Designer) ใน PowerPoint ช่วยเรื่องใด?",
+          options: ["ช่วยออกแบบและจัดวางสไลด์ให้สวยงามโดยอัตโนมัติ", "แปลภาษาข้อความในสไลด์", "บันทึกเสียงบรรยายอัตโนมัติ", "บีบอัดขนาดไฟล์งานนำเสนอ"],
+          correctIndex: 0,
+          explanation: "Design Suggestions ให้ PowerPoint ช่วยแนะนำการจัดวางและออกแบบสไลด์ให้สวยงามอัตโนมัติในไม่กี่วินาที ผ่านแถบ Designer",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+        },
+        {
+          id: "m365_q13",
+          text: "ฟีเจอร์ Reuse Slides ใน PowerPoint ทำสิ่งใด?",
+          options: ["นำสไลด์จากไฟล์งานนำเสนออื่นมาใช้ซ้ำได้ทันที", "ทำซ้ำสไลด์เดิมภายในไฟล์เดียว", "ล้างการจัดรูปแบบ of สไลด์", "แปลงสไลด์เป็นวิดีโอ"],
+          correctIndex: 0,
+          explanation: "Reuse Slides ช่วยนำสไลด์จากไฟล์งานนำเสนออื่นมาใช้ซ้ำได้ทันที โดยเลือกติ๊ก Keep source formatting เพื่อคงดีไซน์เดิมได้",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+        },
+        {
+          id: "m365_q14",
+          text: "OneNote จัดโครงสร้างการบันทึกในรูปแบบใด?",
+          options: ["สมุด (Notebook) → หมวดหมู่ (Section) → หน้า (Page)", "โฟลเดอร์ → ไฟล์ → ชีต", "ทีม → ช่อง → ข้อความ", "ไดรฟ์ → โฟลเดอร์ → ลิงก์"],
+          correctIndex: 0,
+          explanation: "OneNote จัดโครงสร้างแบบยืดหยุ่นโดยแบ่งเป็นสมุด (Notebook), หมวดหมู่ (Section) และหน้า (Page)",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+        },
+        {
+          id: "m365_q15",
+          text: "ฟีเจอร์ Search Across Notebooks ใน OneNote ทำอะไรได้?",
+          options: ["ค้นหาข้อมูลข้ามทุกสมุดบันทึกได้ในคลิกเดียว", "แปลงบันทึกเป็นไฟล์ PDF", "ซิงค์บันทึกกับ Excel", "ล็อกสมุดบันทึกด้วยรหัสผ่าน"],
+          correctIndex: 0,
+          explanation: "Search Across Notebooks ช่วยค้นหาคำสำคัญข้ามทุกสมุดบันทึกพร้อมกัน โดยเลือกขอบเขตเป็น All Notebooks",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+        },
+        {
+          id: "m365_q16",
+          text: "แอปในกลุ่มที่ 2 (อีเมลและการประสานงานหลัก) คือแอปใด?",
+          options: ["Outlook และ Teams", "Excel และ Word", "OneNote และ OneDrive", "PowerPoint และ Excel"],
+          correctIndex: 0,
+          explanation: "กลุ่มที่ 2 เป็นแอปสำหรับอีเมลและการประสานงานหลัก ได้แก่ Outlook และ Microsoft Teams",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+        },
+        {
+          id: "m365_q17",
+          text: "ฟีเจอร์ Focused Inbox ใน Outlook ทำหน้าที่ใด?",
+          options: ["แยกอีเมลสำคัญออกจากอีเมลทั่วไปโดยอัตโนมัติ", "ลบอีเมลขยะทิ้งถาวรทันที", "แปลอีเมลเป็นภาษาอื่น", "เข้ารหัสอีเมลทุกฉบับ"],
+          correctIndex: 0,
+          explanation: "Focused Inbox ช่วยให้ Outlook แยกอีเมลสำคัญออกจากอีเมลทั่วไปโดยอัตโนมัติ",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+        },
+        {
+          id: "m365_q18",
+          text: "\"ผู้ช่วยจัดตารางเวลา (Scheduling Assistant)\" ใน Outlook ใช้ทำสิ่งใด?",
+          options: ["ดูช่วงเวลาที่ผู้เข้าร่วมทุกคนว่างตรงกัน", "ตอบอีเมลอัตโนมัติแทนผู้ใช้", "จัดเรียงอีเมลตามหมวดหมู่สี", "บันทึกการประชุมเป็นข้อความ"],
+          correctIndex: 0,
+          explanation: "Scheduling Assistant ช่วยตรวจสอบเวลาว่างของผู้เข้าร่วม เพื่อหาช่วงเวลาที่ทุกคนว่างตรงกันในการนัดประชุม",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+        },
+        {
+          id: "m365_q19",
+          text: "ใน Microsoft Teams การจัดกลุ่มการทำงานตามโครงการหรือแผนกใช้สิ่งใด?",
+          options: ["ทีม (Teams) และช่อง (Channels)", "โฟลเดอร์และไฟล์", "สมุดและหน้า", "ป้ายและหมวดหมู่สี"],
+          correctIndex: 0,
+          explanation: "Teams จัดกลุ่มการทำงานเป็นทีม (Team) และแบ่งช่อง (Channel) ตามโครงการ แผนก หรือหัวข้องาน",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
+        },
+        {
+          id: "m365_q20",
+          text: "ฟีเจอร์ Version History ใน OneDrive มีประโยชน์อย่างไร?",
+          options: ["ย้อนดูและกู้คืนไฟล์เวอร์ชันก่อนหน้าได้ทุกเมื่อ", "ลบไฟล์เก่าทิ้งอัตโนมัติเพื่อประหยัดพื้นที่", "แปลงไฟล์เป็นรูปแบบอื่น", "จำกัดจำนวนคนที่แก้ไขไฟล์"],
+          correctIndex: 0,
+          explanation: "Version History ช่วยแสดงเวอร์ชันย้อนหลังพร้อมวันที่ เวลา และผู้แก้ไข ทำให้เปรียบเทียบและกู้คืนไฟล์เวอร์ชันก่อนหน้าได้ทุกเมื่อ",
+          packetId: "p_m365",
+          booklet: "ชุดข้อสอบ Microsoft 365 & Copilot"
         }
       ];
 
@@ -1231,17 +1420,17 @@ async function startServer() {
 
       insertStmt.run(
         "demo-quiz",
-        "แบบทดสอบความรู้ทั่วไปด้านไอทีและเทคโนโลยี (Demo Tech Quiz)",
-        "ทีมงานรุ่นใหม่ (Gen Z Tech Team)",
-        "DRAFT",
+        "ห้องสอบ Microsoft 365 & Copilot",
+        "ห้องสอบพนักงาน (Employee Exam)",
+        "ACTIVE",
         null,
         null,
         60,
-        10,
+        20,
+        20,
         3,
-        2,
         "full",
-        "fully_random",
+        "static",
         JSON.stringify(seedQuestions.map(q => ({
           id: q.id,
           text: q.text,
@@ -1250,11 +1439,11 @@ async function startServer() {
           explanation: q.explanation
         }))),
         "manual",
-        JSON.stringify(["q1", "q2", "q3", "q4", "q5"]),
+        JSON.stringify(seedQuestions.map(q => q.id)),
         "",
         "all",
         0,
-        "",
+        "ชุดข้อสอบ Microsoft 365 & Copilot",
         new Date().toISOString(),
         new Date().toISOString()
       );

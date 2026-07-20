@@ -579,7 +579,7 @@ export default function AdminRolesManager() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left border-collapse">
+              <table className="w-full min-w-[650px] text-xs text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b-2 border-black">
                     <th className="py-2.5 px-3 font-black text-slate-700 uppercase font-mono tracking-wider text-[10px]">ประเภท</th>

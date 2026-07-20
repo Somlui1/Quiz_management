@@ -627,10 +627,10 @@ export default function App() {
             {/* END: RedesignedStatusNotification */}
 
             {/* BEGIN: MainContentTabs */}
-            <nav className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3" data-purpose="tab-navigation">
+            <nav className="grid grid-cols-2 md:flex md:flex-row md:flex-wrap gap-2 sm:gap-3" data-purpose="tab-navigation">
               <button 
                 onClick={() => setAdminMenu("bank")}
-                className={`px-4 sm:px-6 py-3 sm:py-4 neo-border-2 font-bold text-xs sm:text-sm hover:bg-gray-100 uppercase tracking-tighter cursor-pointer transition-all flex-1 sm:flex-initial text-center justify-center ${
+                className={`px-4 sm:px-6 py-3 sm:py-4 neo-border-2 font-bold text-xs sm:text-sm hover:bg-gray-100 uppercase tracking-tighter cursor-pointer transition-all text-center justify-center flex items-center ${
                   adminMenu === "bank"
                     ? "bg-brand-accent-blue text-white shadow-[4px_4px_0px_0px_#000]"
                     : "bg-white text-slate-800"
@@ -640,7 +640,7 @@ export default function App() {
               </button>
               <button 
                 onClick={() => setAdminMenu("campaigns")}
-                className={`px-4 sm:px-6 py-3 sm:py-4 neo-border-2 font-bold text-xs sm:text-sm hover:bg-gray-100 uppercase tracking-tighter cursor-pointer transition-all flex-1 sm:flex-initial text-center justify-center ${
+                className={`px-4 sm:px-6 py-3 sm:py-4 neo-border-2 font-bold text-xs sm:text-sm hover:bg-gray-100 uppercase tracking-tighter cursor-pointer transition-all text-center justify-center flex items-center ${
                   adminMenu === "campaigns"
                     ? "bg-brand-accent-blue text-white shadow-[4px_4px_0px_0px_#000]"
                     : "bg-white text-slate-800"
@@ -650,7 +650,7 @@ export default function App() {
               </button>
               <button 
                 onClick={() => setAdminMenu("branding")}
-                className={`px-4 sm:px-6 py-3 sm:py-4 neo-border-2 font-bold text-xs sm:text-sm hover:bg-gray-100 flex items-center gap-2 uppercase tracking-tighter cursor-pointer transition-all flex-1 sm:flex-initial justify-center ${
+                className={`px-4 sm:px-6 py-3 sm:py-4 neo-border-2 font-bold text-xs sm:text-sm hover:bg-gray-100 flex items-center gap-2 uppercase tracking-tighter cursor-pointer transition-all justify-center ${
                   adminMenu === "branding"
                     ? "bg-brand-accent-blue text-white shadow-[4px_4px_0px_0px_#000]"
                     : "bg-white text-slate-800"
@@ -661,7 +661,7 @@ export default function App() {
               </button>
               <button 
                 onClick={() => setAdminMenu("roles")}
-                className={`px-4 sm:px-6 py-3 sm:py-4 neo-border-2 font-bold text-xs sm:text-sm hover:bg-gray-100 flex items-center gap-2 uppercase tracking-tighter cursor-pointer transition-all flex-1 sm:flex-initial justify-center ${
+                className={`px-4 sm:px-6 py-3 sm:py-4 neo-border-2 font-bold text-xs sm:text-sm hover:bg-gray-100 flex items-center gap-2 uppercase tracking-tighter cursor-pointer transition-all justify-center ${
                   adminMenu === "roles"
                     ? "bg-brand-accent-blue text-white shadow-[4px_4px_0px_0px_#000]"
                     : "bg-white text-slate-800"

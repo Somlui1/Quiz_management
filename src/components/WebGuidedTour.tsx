@@ -89,8 +89,14 @@ export default function WebGuidedTour({
       localStorage.removeItem("aapico_tour_step");
       localStorage.removeItem("aapico_tour_active");
     } catch (_) {}
-    // Revert URL query
+    // Revert URL query and logout mock admin
     setUrlCampaignId(null);
+    setActiveTab("student");
+    setAdminUser(null);
+    try {
+      localStorage.removeItem("authenticated_admin_profile");
+      localStorage.removeItem("authenticated_admin_token");
+    } catch (_) {}
     setStep(1);
     onClose();
   };
@@ -110,32 +116,34 @@ export default function WebGuidedTour({
       setUrlCampaignId("tour-demo-quiz");
       
       // Dispatch custom event to notify QuizTaker component to set appropriate internal view
+      // Increased delay to 150ms to ensure component mounting and state rendering are fully complete
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent("tour-step-changed", { detail: { step: currentStep } }));
-      }, 50);
+      }, 150);
     } else if (currentStep === 7) {
       // Transition to Proctor Dashboard view
       setActiveTab("admin");
       setAdminMenu("campaigns");
-      setAdminUser({
+      const adminProfile = {
         name: "อาจารย์ สมชาย (ผู้คุมสอบ)",
         emNo: "T9999",
         department: "ฝ่ายฝึกอบรมพัฒนา"
-      });
+      };
+      setAdminUser(adminProfile);
+      try {
+        localStorage.setItem("authenticated_admin_profile", JSON.stringify(adminProfile));
+      } catch (_) {}
       
       // Dispatch custom event to set CampaignAnalytics to Live Lobby tab with tour-demo-quiz
+      // Increased delay to 150ms to ensure component mounting and state rendering are fully complete
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent("tour-step-changed", { detail: { step: currentStep } }));
-      }, 50);
+      }, 150);
     }
   };
 
   // Run highlight on the element with aggressive DOM polling
   const highlightStep = (stepNum: number) => {
-    if (driverRef.current) {
-      driverRef.current.destroy();
-    }
-
     const config = STEP_CONFIGS[stepNum];
     if (!config) return;
 
@@ -165,22 +173,21 @@ export default function WebGuidedTour({
 
   // Launch driver.js popup highlights
   const triggerDriver = (stepNum: number, config: any) => {
+    if (!driverRef.current) {
+      driverRef.current = driver({
+        allowClose: false, // Prevent clicking outside / Esc key from closing
+        animate: true,
+        overlayColor: "#050B1A",
+        overlayOpacity: 0.8,
+        popoverClass: "aapico-tour-popover"
+      });
+    }
+
     const isLast = stepNum === 7;
 
-    const d = driver({
-      allowClose: true,
-      overlayColor: "#050B1A",
-      overlayOpacity: 0.8,
-      popoverClass: "aapico-tour-popover",
-      onCloseClick: () => {
-        handleTourClose();
-      }
-    });
-
-    driverRef.current = d;
-
-    d.highlight({
+    driverRef.current.highlight({
       element: config.element,
+      disableActiveInteraction: true, // Prevent user interactions that would break tour state
       popover: {
         title: `<div class="flex items-center gap-2 text-[#1D366D] font-black font-sans text-xs tracking-tight uppercase">
                   <span class="bg-[#1D366D] text-white text-[9.5px] px-2 py-0.5 rounded-full font-bold">ขั้นตอน ${stepNum}/7</span>

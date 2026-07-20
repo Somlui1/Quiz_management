@@ -1452,8 +1452,8 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
             </span>
           </div>
 
-          {/* Grid wrapper */}
-          <div className="grid grid-cols-5 gap-1.5">
+          {/* Flex wrap wrapper with auto dynamic wrapping */}
+          <div className="flex flex-wrap gap-2 justify-start items-center">
             {shuffledQuestions.map((q, qIndex) => {
               const hasAnswered = answers[q.id] !== undefined;
               const isSelected = currentIdx === qIndex;
@@ -1470,7 +1470,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
                       }
                     }
                   }}
-                  className={`py-2 text-xs font-bold font-mono rounded-lg transition-all duration-200 cursor-pointer ${
+                  className={`w-10 h-10 !p-0 shrink-0 flex items-center justify-center text-xs font-bold font-mono rounded-full transition-all duration-200 cursor-pointer ${
                     isSelected
                       ? "bg-[#1D366D] text-white shadow-sm hover:bg-indigo-900"
                       : hasAnswered

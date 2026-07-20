@@ -47,6 +47,7 @@ input, select, textarea, input.rounded-none, select.rounded-none, textarea.round
   border-radius: 12px !important; /* M3 input field rounding */
   border: 1px solid #cbd5e1 !important;
   background-color: #f8fafc !important;
+  color: #0f172a !important; /* Force high-contrast dark text to prevent white-on-white text in system dark modes */
   padding: 0.75rem 1rem;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
