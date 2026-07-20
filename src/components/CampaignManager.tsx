@@ -39,6 +39,16 @@ export default function CampaignManager() {
   // Share Dialog Overlay
   const [shareCampaign, setShareCampaign] = useState<Campaign | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [copiedCampaignId, setCopiedCampaignId] = useState<string | null>(null);
+
+  const handleCopyCampaignId = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(id);
+    setCopiedCampaignId(id);
+    setTimeout(() => {
+      setCopiedCampaignId(null);
+    }, 2000);
+  };
 
   // Central Question Bank States
   const [formQuestionSelectionMode, setFormQuestionSelectionMode] = useState<"manual" | "random">("manual");
@@ -75,6 +85,46 @@ export default function CampaignManager() {
     fetchCampaigns();
     fetchBankQuestions();
     fetchPackets();
+  }, []);
+
+  // Tour Step Synchronizer for Proctor Dashboard
+  useEffect(() => {
+    const applyStep7State = () => {
+      const mockCamp = {
+        id: "tour-demo-quiz",
+        name: "ควิซสาธิตระบบ (Demo Quiz)",
+        groupName: "กลุ่มทดสอบ (Web Guided Tour)",
+        passingPercentage: 60,
+        timeLimitMinutes: 5,
+        questions: [],
+        resultsDisplayMode: "full",
+        randomizationMode: "question_choice",
+        createdAt: new Date().toISOString()
+      } as any;
+      setSelectedCampaign(mockCamp);
+      setView("analytics");
+    };
+
+    // 1. Instantly check localStorage on mount
+    try {
+      const savedTourActive = localStorage.getItem("aapico_tour_active") === "true";
+      const savedTourStep = localStorage.getItem("aapico_tour_step");
+      if (savedTourActive && savedTourStep === "7") {
+        applyStep7State();
+      }
+    } catch (_) {}
+
+    // 2. Fallback Event Listener
+    const handleTourStepChange = (e: CustomEvent) => {
+      const step = e.detail.step;
+      if (step === 7) {
+        applyStep7State();
+      }
+    };
+    window.addEventListener("tour-step-changed", handleTourStepChange as any);
+    return () => {
+      window.removeEventListener("tour-step-changed", handleTourStepChange as any);
+    };
   }, []);
 
   const fetchPackets = async () => {
@@ -232,6 +282,12 @@ export default function CampaignManager() {
   };
 
   const handleDelete = async (id: string) => {
+    const targetCamp = campaigns.find(c => c.id === id);
+    if (targetCamp && targetCamp.status === "ACTIVE") {
+      showError("ไม่สามารถลบห้องสอบได้", "ห้ามลบห้องสอบในระหว่างที่ระบบสอบเปิดใช้งานอยู่ (ACTIVE) กรุณาปิดระบบสอบก่อนการลบ");
+      return;
+    }
+
     const confirmed = await showConfirm(
       "คุณแน่ใจหรือไม่ที่จะลบห้องสอบนี้?",
       "ข้อมูลรายชื่อและคะแนนสอบทั้งหมดในห้องสอบนี้จะถูกลบอย่างถาวรและไม่สามารถกู้คืนได้"
@@ -427,13 +483,31 @@ export default function CampaignManager() {
                   >
                     <div>
                       {/* Badge and ID Header */}
-                      <div className="flex items-center justify-between gap-2 mb-4">
-                        <span className="text-[10px] font-bold font-mono text-[#1D366D] bg-indigo-50/50 px-2.5 py-1 rounded-lg border border-indigo-100/30">
-                          ID: {camp.id.toUpperCase()}
-                        </span>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-50 pb-3">
+                        <div className="flex items-center gap-1 bg-slate-50 border border-slate-200/80 pl-2.5 pr-1.5 py-1 rounded-xl shadow-2xs max-w-full">
+                          <span className="text-[10px] font-bold text-slate-400 font-mono uppercase shrink-0">รหัสควิซ:</span>
+                          <span className="text-sm sm:text-base font-black font-mono tracking-wider text-[#1D366D] truncate select-all">
+                            {camp.id.toUpperCase()}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => handleCopyCampaignId(camp.id, e)}
+                            className="ml-1.5 inline-flex items-center justify-center p-1.5 bg-white border border-slate-200 hover:bg-[#1D366D] hover:text-white hover:border-[#1D366D] rounded-lg text-slate-500 transition-all duration-200 cursor-pointer shadow-2xs shrink-0 active:scale-95"
+                            title="คัดลอกรหัสห้องสอบ"
+                          >
+                            {copiedCampaignId === camp.id ? (
+                              <Check size={12} className="text-emerald-500 font-bold" />
+                            ) : (
+                              <Copy size={12} />
+                            )}
+                          </button>
+                          {copiedCampaignId === camp.id && (
+                            <span className="text-[9px] font-black text-emerald-600 animate-pulse ml-1 shrink-0">คัดลอกแล้ว!</span>
+                          )}
+                        </div>
 
                         <span
-                          className={`text-[10px] px-2.5 py-1 font-bold rounded-full border ${
+                          className={`text-[10px] px-2.5 py-1 font-black uppercase tracking-wider rounded-full border self-start sm:self-auto shrink-0 ${
                             camp.status === "ACTIVE"
                               ? "bg-emerald-50 border-emerald-100 text-emerald-700 animate-pulse"
                               : camp.status === "COMPLETED"
@@ -453,9 +527,17 @@ export default function CampaignManager() {
                       <h3 className="text-base font-bold text-slate-800 tracking-tight line-clamp-1">
                         {camp.name}
                       </h3>
-                      <p className="text-xs text-slate-400 font-medium mt-1">
-                        เป้าหมายผู้สอบ: <span className="font-semibold text-[#1D366D]">{camp.groupName}</span>
-                      </p>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-1">
+                        <p className="text-xs text-slate-400 font-medium">
+                          เป้าหมายผู้สอบ: <span className="font-semibold text-[#1D366D]">{camp.groupName}</span>
+                        </p>
+                        {camp.activeTakersCount !== undefined && camp.activeTakersCount > 0 ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-wider animate-pulse shadow-2xs self-start sm:self-auto shrink-0">
+                            <span className="w-1.5 h-1.5 rounded-full bg-white inline-block animate-ping"></span>
+                            <span>กำลังทำข้อสอบ {camp.activeTakersCount} คน</span>
+                          </span>
+                        ) : null}
+                      </div>
 
                       {/* Parameters Grid - 2 columns on PC, 1 column on Mobile */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-4 p-3 bg-slate-50/50 rounded-xl border border-slate-100/50 text-xs text-slate-500">
@@ -625,34 +707,57 @@ export default function CampaignManager() {
                         </button>
                       </div>
 
-                      <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1.5">
-                        <span>สร้างเมื่อ {new Date(camp.createdAt).toLocaleDateString("th-TH")}</span>
-                        <div className="flex items-center gap-1">
+                      {/* Admin Operations Section (Reset, Edit, Delete) */}
+                      <div className="mt-3 pt-3 border-t border-slate-100 flex flex-col gap-2">
+                        <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                          <span>สร้างเมื่อ {new Date(camp.createdAt).toLocaleDateString("th-TH")}</span>
+                          <span className="text-[#1D366D]">เครื่องมือผู้ดูแลระบบ</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          {/* 1. รีเซ็ตผลห้องสอบ */}
                           <button
                             type="button"
                             onClick={() => handleResetCampaign(camp.id, camp.name)}
-                            className="p-1.5 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors duration-200 cursor-pointer"
-                            title="รีเซ็ตผลสอบและรายชื่อในห้องสอบนี้"
+                            className="inline-flex items-center justify-center gap-1.5 px-2 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/80 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer shadow-2xs active:scale-[0.98]"
+                            title="รีเซ็ตผลสอบและรายชื่อในห้องสอบนี้ให้เริ่มใหม่ทั้งหมด"
                           >
-                            <RotateCcw size={14} />
+                            <RotateCcw size={13} className="shrink-0 text-amber-600" />
+                            <span>รีเซ็ตผล</span>
                           </button>
+
+                          {/* 2. แก้ไขคำถาม/ตัวฟอร์ม */}
                           <button
                             type="button"
                             onClick={() => handleEdit(camp)}
-                            className="p-1.5 text-slate-400 hover:text-[#1D366D] hover:bg-slate-50 rounded-lg transition-colors duration-200 cursor-pointer"
-                            title="แก้ไขคำถามและตัวฟอร์ม"
+                            className="inline-flex items-center justify-center gap-1.5 px-2 py-2.5 bg-slate-50 hover:bg-indigo-50 hover:text-[#1D366D] hover:border-[#1D366D]/30 text-slate-700 border border-slate-200/80 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer shadow-2xs active:scale-[0.98]"
+                            title="แก้ไขคำถาม โครงสร้างตัวเลือก และรายละเอียดแคมเปญ"
                           >
-                            <Edit size={14} />
+                            <Edit size={13} className="shrink-0 text-slate-500" />
+                            <span>แก้ไขห้อง</span>
                           </button>
+
+                          {/* 3. ลบห้องสอบพร้อมเงื่อนไขห้ามลบเมื่อ ACTIVE */}
                           <button
                             type="button"
+                            disabled={camp.status === "ACTIVE"}
                             onClick={() => handleDelete(camp.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors duration-200 cursor-pointer"
-                            title="ลบห้องสอบ"
+                            className={`inline-flex items-center justify-center gap-1.5 px-2 py-2.5 border rounded-xl text-xs font-bold transition-all duration-200 shadow-2xs active:scale-[0.98] ${
+                              camp.status === "ACTIVE"
+                                ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-55"
+                                : "bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200/80 cursor-pointer"
+                            }`}
+                            title={camp.status === "ACTIVE" ? "ห้ามลบห้องสอบในระหว่างที่ระบบเปิดสอบอยู่ (ACTIVE) กรุณาปิดระบบสอบก่อน" : "ลบห้องสอบนี้ทิ้งถาวร"}
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={13} className={`shrink-0 ${camp.status === "ACTIVE" ? "text-slate-350" : "text-rose-600"}`} />
+                            <span>ลบห้อง</span>
                           </button>
                         </div>
+                        {camp.status === "ACTIVE" && (
+                          <div className="text-[10px] font-bold text-rose-600 flex items-center gap-1.5 mt-1 px-2.5 py-1.5 bg-rose-50 border border-rose-100 rounded-lg animate-pulse">
+                            <ShieldAlert size={12} className="shrink-0 text-rose-600" />
+                            <span>ห้ามลบห้องสอบขณะเปิดระบบสอบ (ACTIVE) อยู่</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -676,10 +781,10 @@ export default function CampaignManager() {
                 <ArrowLeft size={16} />
               </button>
               <div>
-                <h1 className="text-lg sm:text-xl font-black text-slate-900 font-sans tracking-tight uppercase">
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 font-sans tracking-tight uppercase">
                   {view === "create" ? "สร้างห้องสอบควิซใหม่" : `แก้ไขห้องสอบ: ${formName}`}
                 </h1>
-                <p className="text-xs text-slate-500 font-medium">กำหนดเกณฑ์ ความปลอดภัย และเนื้อหาคำถามของชุดสอบนี้</p>
+                <p className="text-sm text-slate-500 font-bold mt-0.5">กำหนดเกณฑ์ ความปลอดภัย และเนื้อหาคำถามของชุดสอบนี้</p>
               </div>
             </div>
 
@@ -687,33 +792,33 @@ export default function CampaignManager() {
               <button
                 type="button"
                 onClick={() => setView("list")}
-                className="flex-1 md:flex-none text-center px-4 py-2.5 bg-white border-3 border-black text-slate-800 hover:bg-slate-50 text-xs font-black uppercase tracking-wider rounded-none transition-all shadow-[4px_4px_0px_0px_#000000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_#000000] cursor-pointer"
+                className="flex-1 md:flex-none text-center px-6 py-3.5 bg-white border-3 border-black text-slate-800 hover:bg-slate-50 text-xs sm:text-sm font-black uppercase tracking-wider rounded-xl transition-all shadow-[4px_4px_0px_0px_#000000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_#000000] cursor-pointer"
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
-                className="flex-1 md:flex-none text-center px-4 py-2.5 bg-aapico-green hover:bg-[#25b542] text-black text-xs font-black uppercase tracking-wider rounded-none transition-all border-3 border-black shadow-[4px_4px_0px_0px_#000000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_#000000] cursor-pointer"
+                className="flex-1 md:flex-none text-center px-6 py-3.5 bg-aapico-green hover:bg-[#25b542] text-black text-xs sm:text-sm font-black uppercase tracking-wider rounded-xl transition-all border-3 border-black shadow-[4px_4px_0px_0px_#000000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_#000000] cursor-pointer"
               >
                 บันทึกห้องสอบ
               </button>
             </div>
           </div>
 
-          <div className="max-w-4xl mx-auto space-y-6">
+          <div className="max-w-5xl mx-auto space-y-8">
             {/* Card 1: Basic Information */}
-            <div className="bg-white p-6 border-3 border-black rounded-none shadow-[4px_4px_0px_0px_#000000] space-y-4">
-              <div className="flex items-center gap-2 border-b-2 border-black pb-3">
-                <Settings className="text-aapico-blue" size={18} />
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest font-sans">
+            <div className="bg-white p-8 border-3 border-black rounded-2xl shadow-[6px_6px_0px_0px_#000000] space-y-6">
+              <div className="flex items-center gap-2.5 border-b-2 border-black pb-4">
+                <Settings className="text-[#1D366D]" size={20} />
+                <h3 className="text-sm sm:text-base font-black text-[#1D366D] uppercase tracking-wide font-sans">
                   ข้อมูลห้องสอบพื้นฐาน (Basic Information)
                 </h3>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Unique ID */}
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5 font-mono">รหัสห้องสอบ (Exam Room ID / Campaign ID)</label>
+                  <label className="block text-xs sm:text-sm font-black uppercase tracking-wide text-slate-700 mb-2 font-mono">รหัสห้องสอบ (Exam Room ID / Campaign ID)</label>
                   <input
                     type="text"
                     required
@@ -722,58 +827,58 @@ export default function CampaignManager() {
                     placeholder="เช่น midterm-math-m1"
                     value={formId}
                     onChange={(e) => setFormId(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
-                    className="w-full px-3.5 py-2.5 border-2 border-black disabled:bg-slate-100 disabled:text-slate-400 rounded-none text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue text-slate-900 bg-white"
+                    className="w-full px-4.5 py-3 border-2 border-black disabled:bg-slate-50 disabled:text-slate-400 rounded-xl text-sm sm:text-base font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue text-slate-950 bg-white"
                   />
-                  <span className="text-[9px] text-slate-400 block mt-1.5 leading-relaxed">ใช้ภาษาอังกฤษ ตัวเลข ขีดล่าง หรือขีดกลางเท่านั้น ห้ามเว้นวรรค</span>
+                  <span className="text-xs text-slate-500 block mt-2 font-medium leading-relaxed">ใช้ภาษาอังกฤษ ตัวเลข ขีดล่าง หรือขีดกลางเท่านั้น ห้ามเว้นวรรค</span>
                 </div>
 
                 {/* Title Name */}
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5 font-sans">ชื่อห้องสอบแบบทดสอบ (Exam Room Name)</label>
+                  <label className="block text-xs sm:text-sm font-black uppercase tracking-wide text-slate-700 mb-2 font-sans">ชื่อห้องสอบแบบทดสอบ (Exam Room Name)</label>
                   <input
                     type="text"
                     required
                     placeholder="เช่น สอบกลางภาควิชาคณิตศาสตร์"
                     value={formName}
                     onChange={(e) => setFormName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 border-2 border-black rounded-none text-xs focus:outline-none focus:ring-2 focus:ring-aapico-blue text-slate-900 font-bold bg-white"
+                    className="w-full px-4.5 py-3 border-2 border-black rounded-xl text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-aapico-blue text-slate-950 font-bold bg-white"
                   />
-                  <span className="text-[9px] text-slate-400 block mt-1.5 leading-relaxed">ชื่อเรียกห้องสอบที่ปรากฏให้ผู้เข้าสอบเห็น</span>
+                  <span className="text-xs text-slate-500 block mt-2 font-medium leading-relaxed">ชื่อเรียกห้องสอบที่ปรากฏให้ผู้เข้าสอบเห็น</span>
                 </div>
 
                 {/* Target Group */}
                 <div className="md:col-span-2">
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5 font-mono">กลุ่มผู้เข้าสอบ / กลุ่มวิชา / แผนก (Target Group)</label>
+                  <label className="block text-xs sm:text-sm font-black uppercase tracking-wide text-slate-700 mb-2 font-mono">กลุ่มผู้เข้าสอบ / กลุ่มวิชา / แผนก (Target Group)</label>
                   <input
                     type="text"
                     required
                     placeholder="เช่น ม.1 ห้อง Gifted, แผนกวิศวกรรมเครือข่าย"
                     value={formGroupName}
                     onChange={(e) => setFormGroupName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 border-2 border-black rounded-none text-xs font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue text-slate-900 bg-white"
+                    className="w-full px-4.5 py-3 border-2 border-black rounded-xl text-sm sm:text-base font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue text-slate-950 bg-white"
                   />
                 </div>
               </div>
             </div>
 
             {/* Card 2: Timing & Passing Rules */}
-            <div className="bg-white p-6 border-3 border-black rounded-none shadow-[4px_4px_0px_0px_#000000] space-y-4">
-              <div className="flex items-center gap-2 border-b-2 border-black pb-3">
-                <Clock className="text-aapico-blue" size={18} />
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest font-sans">
+            <div className="bg-white p-8 border-3 border-black rounded-2xl shadow-[6px_6px_0px_0px_#000000] space-y-6">
+              <div className="flex items-center gap-2.5 border-b-2 border-black pb-4">
+                <Clock className="text-[#1D366D]" size={20} />
+                <h3 className="text-sm sm:text-base font-black text-[#1D366D] uppercase tracking-wide font-sans">
                   เกณฑ์และเงื่อนไขการเข้าสอบ (Rules & Timing Constraints)
                 </h3>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Timed / Untimed Mode */}
                 <div className="md:col-span-2">
-                  <label className="block text-[10px] font-black text-slate-500 mb-1.5 font-mono uppercase tracking-wider">โหมดจำกัดเวลาการสอบ (Time Constraint Mode)</label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <label className="block text-xs sm:text-sm font-black text-slate-700 mb-2 font-mono uppercase tracking-wide">โหมดจำกัดเวลาการสอบ (Time Constraint Mode)</label>
+                  <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
                       onClick={() => setFormIsUntimed(false)}
-                      className={`py-2.5 px-4 border-2 rounded-none text-xs font-black uppercase transition-all cursor-pointer ${
+                      className={`py-3 px-5 border-2 rounded-xl text-xs sm:text-sm font-black uppercase transition-all cursor-pointer ${
                         !formIsUntimed
                           ? "bg-indigo-50 border-black text-aapico-blue shadow-[2px_2px_0px_0px_#000000]"
                           : "bg-white border-black text-slate-700 hover:bg-slate-50"
@@ -784,7 +889,7 @@ export default function CampaignManager() {
                     <button
                       type="button"
                       onClick={() => setFormIsUntimed(true)}
-                      className={`py-2.5 px-4 border-2 rounded-none text-xs font-black uppercase transition-all cursor-pointer ${
+                      className={`py-3 px-5 border-2 rounded-xl text-xs sm:text-sm font-black uppercase transition-all cursor-pointer ${
                         formIsUntimed
                           ? "bg-indigo-50 border-black text-aapico-blue shadow-[2px_2px_0px_0px_#000000]"
                           : "bg-white border-black text-slate-700 hover:bg-slate-50"
@@ -797,7 +902,7 @@ export default function CampaignManager() {
 
                 {/* Duration & Passing Score */}
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5 font-mono">
+                  <label className="block text-xs sm:text-sm font-black uppercase tracking-wide text-slate-700 mb-2 font-mono">
                     เวลาสอบสอบจำกัด {!formIsUntimed ? "(หน่วยนาที)" : "(ไม่จำกัดเวลา)"}
                   </label>
                   <input
@@ -808,12 +913,12 @@ export default function CampaignManager() {
                     max={180}
                     value={formTimeLimitMinutes}
                     onChange={(e) => setFormTimeLimitMinutes(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 border-2 border-black disabled:bg-slate-100 disabled:text-slate-400 rounded-none text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue text-slate-900 bg-white"
+                    className="w-full px-4.5 py-3 border-2 border-black disabled:bg-slate-50 disabled:text-slate-400 rounded-xl text-sm sm:text-base font-mono font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue text-slate-950 bg-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1.5 font-mono">เกณฑ์การสอบผ่าน (%)</label>
+                  <label className="block text-xs sm:text-sm font-black uppercase tracking-wide text-slate-700 mb-2 font-mono">เกณฑ์การสอบผ่าน (%)</label>
                   <input
                     type="number"
                     required
@@ -821,13 +926,13 @@ export default function CampaignManager() {
                     max={100}
                     value={formPassingPercentage}
                     onChange={(e) => setFormPassingPercentage(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 border-2 border-black rounded-none text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue text-slate-900 bg-white"
+                    className="w-full px-4.5 py-3 border-2 border-black rounded-xl text-sm sm:text-base font-mono font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue text-slate-950 bg-white"
                   />
                 </div>
 
                 {/* Attempt Control */}
                 <div>
-                  <label className="block text-[10px] font-black text-slate-500 mb-1.5 font-mono uppercase tracking-wider">
+                  <label className="block text-xs sm:text-sm font-black text-slate-700 mb-2 font-mono uppercase tracking-wide">
                     จำนวนครั้งสูงสุดที่สอบได้ (Max Attempts)
                   </label>
                   <input
@@ -835,9 +940,9 @@ export default function CampaignManager() {
                     min={0}
                     value={formMaxAttempts}
                     onChange={(e) => setFormMaxAttempts(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 border-2 border-black rounded-none text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue bg-white text-slate-900"
+                    className="w-full px-4.5 py-3 border-2 border-black rounded-xl text-sm sm:text-base font-mono font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue bg-white text-slate-950"
                   />
-                  <span className="text-[9px] text-slate-400 block mt-1.5 leading-relaxed">
+                  <span className="text-xs text-slate-500 block mt-2 font-medium leading-relaxed">
                     ใส่ <strong className="text-rose-600">1</strong> เพื่อสอบได้ครั้งเดียว, ใส่ <strong className="text-aapico-blue">0</strong> เพื่อสอบซ้ำได้ไม่จำกัด
                   </span>
                 </div>
@@ -845,7 +950,7 @@ export default function CampaignManager() {
                 {/* Randomized Quiz Pool limit */}
                 {formQuestionSelectionMode === "manual" ? (
                   <div>
-                    <label className="block text-[10px] font-black text-slate-500 mb-1.5 font-mono uppercase tracking-wider">
+                    <label className="block text-xs sm:text-sm font-black text-slate-700 mb-2 font-mono uppercase tracking-wide">
                       จำนวนข้อสอบที่ดึงมาทำจริงต่อ Session
                     </label>
                     <input
@@ -854,22 +959,22 @@ export default function CampaignManager() {
                       max={formQuestions.length}
                       value={formTotalQuestionsToTest}
                       onChange={(e) => setFormTotalQuestionsToTest(Number(e.target.value))}
-                      className="w-full px-3.5 py-2.5 border-2 border-black rounded-none text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue bg-white text-slate-900"
+                      className="w-full px-4.5 py-3 border-2 border-black rounded-xl text-sm sm:text-base font-mono font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue bg-white text-slate-950"
                     />
-                    <span className="text-[9px] text-slate-400 block mt-1.5 leading-relaxed">
+                    <span className="text-xs text-slate-500 block mt-2 font-medium leading-relaxed">
                       ใส่ <strong className="text-aapico-blue">0</strong> หรือเว้นว่าง เพื่อใช้ข้อสอบทั้งหมดที่มีอยู่ในตะกร้าคำถาม
                     </span>
                   </div>
                 ) : (
                   <div>
-                    <label className="block text-[10px] font-black text-slate-500 mb-1.5 font-mono uppercase tracking-wider">
+                    <label className="block text-xs sm:text-sm font-black text-slate-700 mb-2 font-mono uppercase tracking-wide">
                       จำนวนข้อสอบต่อ Session (สุ่มยกชุด)
                     </label>
-                    <div className="w-full px-3.5 py-2.5 border-2 border-black rounded-none text-xs font-mono font-bold bg-slate-50 text-slate-500 flex items-center justify-between">
+                    <div className="w-full px-4.5 py-3 border-2 border-black rounded-xl text-sm sm:text-base font-mono font-bold bg-slate-50 text-slate-500 flex items-center justify-between">
                       <span>ดึงตรงตามกฎ Sourcing:</span>
                       <span className="text-aapico-blue font-black">{formRuleCount} ข้อ</span>
                     </div>
-                    <span className="text-[9px] text-slate-400 block mt-1.5 leading-relaxed">
+                    <span className="text-xs text-slate-500 block mt-2 font-medium leading-relaxed">
                       ในโหมดสุ่มหยิบยกชุด จำนวนข้อสอบจะถูกกำหนดโดย <strong className="text-aapico-blue">Rule Count</strong> ในหัวข้อ Sourcing Mode ด้านล่าง
                     </span>
                   </div>
@@ -877,75 +982,75 @@ export default function CampaignManager() {
 
                 {/* Auto opening dates */}
                 <div>
-                  <label className="block text-[10px] font-black text-slate-500 mb-1.5 flex items-center gap-1 font-mono uppercase tracking-wider">
-                    <Calendar size={12} /> วัน-เวลาเปิดรับสมัครสอบอัตโนมัติ (เปิดสอบ)
+                  <label className="block text-xs sm:text-sm font-black text-slate-700 mb-2 flex items-center gap-1.5 font-mono uppercase tracking-wide">
+                    <Calendar size={14} className="text-[#1D366D]" /> วัน-เวลาเปิดรับสมัครสอบอัตโนมัติ (เปิดสอบ)
                   </label>
                   <input
                     type="datetime-local"
                     value={formStartTime}
                     onChange={(e) => setFormStartTime(e.target.value)}
-                    className="w-full px-3.5 py-2.5 border-2 border-black rounded-none text-[11px] font-mono font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue bg-white text-slate-900"
+                    className="w-full px-4.5 py-3 border-2 border-black rounded-xl text-sm sm:text-base font-mono font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue bg-white text-slate-950"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-black text-slate-500 mb-1.5 flex items-center gap-1 font-mono uppercase tracking-wider">
-                    <Calendar size={12} /> วัน-เวลาสิ้นสุดการจัดสอบอัตโนมัติ (ปิดสอบ)
+                  <label className="block text-xs sm:text-sm font-black text-slate-700 mb-2 flex items-center gap-1.5 font-mono uppercase tracking-wide">
+                    <Calendar size={14} className="text-[#1D366D]" /> วัน-เวลาสิ้นสุดการจัดสอบอัตโนมัติ (ปิดสอบ)
                   </label>
                   <input
                     type="datetime-local"
                     value={formEndTime}
                     onChange={(e) => setFormEndTime(e.target.value)}
-                    className="w-full px-3.5 py-2.5 border-2 border-black rounded-none text-[11px] font-mono font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue bg-white text-slate-900"
+                    className="w-full px-4.5 py-3 border-2 border-black rounded-xl text-sm sm:text-base font-mono font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue bg-white text-slate-950"
                   />
                 </div>
               </div>
             </div>
 
             {/* Card 3: Security & Results Presentation */}
-            <div className="bg-white p-6 border-3 border-black rounded-none shadow-[4px_4px_0px_0px_#000000] space-y-4">
-              <div className="flex items-center gap-2 border-b-2 border-black pb-3">
-                <ShieldAlert className="text-aapico-blue" size={18} />
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest font-sans">
+            <div className="bg-white p-8 border-3 border-black rounded-2xl shadow-[6px_6px_0px_0px_#000000] space-y-6">
+              <div className="flex items-center gap-2.5 border-b-2 border-black pb-4">
+                <ShieldAlert className="text-[#1D366D]" size={20} />
+                <h3 className="text-sm sm:text-base font-black text-[#1D366D] uppercase tracking-wide font-sans">
                   ความปลอดภัยและการเปิดเผยผลเฉลย (Security & Feedback Delivery Mode)
                 </h3>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Randomization mode */}
                 <div>
-                  <label className="block text-[10px] font-black text-slate-500 mb-1.5 font-mono uppercase tracking-wider">
+                  <label className="block text-xs sm:text-sm font-black text-slate-700 mb-2 font-mono uppercase tracking-wide">
                     สลับสับลำดับข้อสอบและตัวเลือก (Randomization Mode)
                   </label>
                   <select
                     value={formRandomizationMode}
                     onChange={(e) => setFormRandomizationMode(e.target.value)}
-                    className="w-full px-3.5 py-2.5 border-2 border-black rounded-none text-xs font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue bg-white text-slate-900"
+                    className="w-full px-4.5 py-3 border-2 border-black rounded-xl text-sm sm:text-base font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue bg-white text-slate-950"
                   >
                     <option value="fully_random">Mode 1: สุ่มทั้งหมดดึงจากคลัง (Fully Randomized Pool)</option>
                     <option value="fix_random">Mode 2: สุ่มสลับเฉพาะลำดับโจทย์และลำดับตัวเลือก (Shuffle Sequence & Choices)</option>
                     <option value="static">Mode 3: เรียงคงเดิมตามปกติ (Static Sequence)</option>
                   </select>
-                  <span className="text-[9px] text-slate-400 block mt-1.5 leading-relaxed">
+                  <span className="text-xs text-slate-500 block mt-2 font-medium leading-relaxed">
                     กำหนดการทำงานของฟังก์ชันป้องกันการลอกข้อสอบสลับตัวเลือก
                   </span>
                 </div>
 
                 {/* Display Mode */}
                 <div>
-                  <label className="block text-[10px] font-black text-slate-500 mb-1.5 font-mono uppercase tracking-wider">
+                  <label className="block text-xs sm:text-sm font-black text-slate-700 mb-2 font-mono uppercase tracking-wide">
                     การเปิดเผยผลเฉลยหลังสอบเสร็จ (Result Display Mode)
                   </label>
                   <select
                     value={formResultsDisplayMode}
                     onChange={(e) => setFormResultsDisplayMode(e.target.value)}
-                    className="w-full px-3.5 py-2.5 border-2 border-black rounded-none text-xs font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue bg-white text-slate-900"
+                    className="w-full px-4.5 py-3 border-2 border-black rounded-xl text-sm sm:text-base font-bold focus:outline-none focus:ring-2 focus:ring-aapico-blue bg-white text-slate-950"
                   >
                     <option value="full">Mode 3: แสดงทั้งคะแนน สรุปรายข้อ เฉลยและคำอธิบายละเอียด (Full Breakdown)</option>
                     <option value="score">Mode 2: แสดงผลเปอร์เซ็นต์คะแนนรวมและสรุปผ่าน/ไม่ผ่านเท่านั้น (Score Only)</option>
                     <option value="hidden">Mode 1: ซ่อนคะแนนและผลลัพธ์ทั้งหมดไม่แสดงทันที (Hidden Results)</option>
                   </select>
-                  <span className="text-[9px] text-slate-400 block mt-1.5 leading-relaxed">
+                  <span className="text-xs text-slate-500 block mt-2 font-medium leading-relaxed">
                     ป้องกันการส่งต่อความรู้ระหว่างสอบด้วยการซ่อนหรือปิดเฉลยเมื่อพนักงานสอบเสร็จ
                   </span>
                 </div>
@@ -953,21 +1058,21 @@ export default function CampaignManager() {
             </div>
 
             {/* Card 4: Sourcing & Shopping Basket (Main integrated block) */}
-            <div className="bg-white p-6 border-3 border-black rounded-none shadow-[4px_4px_0px_0px_#000000] space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 border-black pb-3">
-                <div className="flex items-center gap-2">
-                  <Layers className="text-aapico-blue" size={18} />
-                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest font-sans">
+            <div className="bg-white p-8 border-3 border-black rounded-2xl shadow-[6px_6px_0px_0px_#000000] space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 border-black pb-4">
+                <div className="flex items-center gap-2.5">
+                  <Layers className="text-[#1D366D]" size={20} />
+                  <h3 className="text-sm sm:text-base font-black text-[#1D366D] uppercase tracking-wide font-sans">
                     วิธีการคัดเลือกเนื้อหาข้อสอบ (Question Sourcing Mode)
                   </h3>
                 </div>
                 
                 {/* Mode Selector Tab */}
-                <div className="flex bg-slate-100 p-1 rounded-none border-2 border-black self-start sm:self-auto shrink-0 select-none">
+                <div className="flex bg-slate-100 p-1 rounded-xl border-2 border-black self-start sm:self-auto shrink-0 select-none">
                   <button
                     type="button"
                     onClick={() => setFormQuestionSelectionMode("manual")}
-                    className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-none transition-all cursor-pointer ${
+                    className={`px-5 py-2.5 text-xs sm:text-sm font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
                       formQuestionSelectionMode === "manual"
                         ? "bg-white text-slate-950 border border-black shadow-[1px_1px_0px_0px_#000000]"
                         : "text-slate-500 hover:text-slate-900"
@@ -978,7 +1083,7 @@ export default function CampaignManager() {
                   <button
                     type="button"
                     onClick={() => setFormQuestionSelectionMode("random")}
-                    className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-none transition-all cursor-pointer ${
+                    className={`px-5 py-2.5 text-xs sm:text-sm font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
                       formQuestionSelectionMode === "random"
                         ? "bg-white text-slate-950 border border-black shadow-[1px_1px_0px_0px_#000000]"
                         : "text-slate-500 hover:text-slate-900"
@@ -992,13 +1097,13 @@ export default function CampaignManager() {
               {/* Selection Blocks */}
               {formQuestionSelectionMode === "random" ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1.5 font-mono">1. เลือกชุดข้อสอบเป้าหมาย (Target Booklet)</label>
+                      <label className="block text-xs sm:text-sm font-black uppercase tracking-wide text-slate-700 mb-2 font-mono">1. เลือกชุดข้อสอบเป้าหมาย (Target Booklet)</label>
                       <select
                         value={formTargetBooklet}
                         onChange={(e) => setFormTargetBooklet(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border-2 border-black rounded-none text-xs font-bold focus:outline-none"
+                        className="w-full px-4.5 py-3 bg-white border-2 border-black rounded-xl text-sm sm:text-base font-bold focus:outline-none"
                       >
                         {packets.map(p => (
                           <option key={p.id} value={p.name}>{p.name}</option>
@@ -1007,37 +1112,37 @@ export default function CampaignManager() {
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1.5 font-mono">2. จำนวนคำถามที่ต้องการสุ่มจากชุดคำสั่งนี้ (Rule Count)</label>
+                      <label className="block text-xs sm:text-sm font-black uppercase tracking-wide text-slate-700 mb-2 font-mono">2. จำนวนคำถามที่ต้องการสุ่มจากชุดคำสั่งนี้ (Rule Count)</label>
                       <input
                         type="number"
                         min={1}
                         value={formRuleCount}
                         onChange={(e) => setFormRuleCount(Number(e.target.value))}
-                        className="w-full px-3.5 py-2.5 bg-white border-2 border-black rounded-none text-xs font-mono font-bold focus:outline-none"
+                        className="w-full px-4.5 py-3 bg-white border-2 border-black rounded-xl text-sm sm:text-base font-mono font-bold focus:outline-none"
                       />
                     </div>
                   </div>
 
                   {/* Estimation banner */}
                   {formTargetBooklet && (
-                    <div className="p-4 bg-slate-50 border-2 border-black rounded-none">
+                    <div className="p-5 bg-slate-50 border-2 border-black rounded-xl">
                       {(() => {
                         const matched = bankQuestions.filter(q => (q.booklet || "ทั่วไป") === formTargetBooklet);
                         const hasShortage = formRuleCount > matched.length;
 
                         return (
                           <div className="space-y-2">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider font-mono block">การตรวจประเมินโควตาคำถามในระบบ</span>
-                            <div className="text-xs font-bold text-slate-800">
-                              พบข้อสอบในชุดข้อสอบคลังร่วมทั้งหมด: <span className="text-aapico-blue font-black underline">{matched.length} ข้อ</span>
+                            <span className="text-xs font-black text-slate-400 uppercase tracking-wide font-mono block">การตรวจประเมินโควตาคำถามในระบบ</span>
+                            <div className="text-sm font-bold text-slate-800">
+                              พบข้อสอบในชุดข้อสอบคลังร่วมทั้งหมด: <span className="text-aapico-blue font-black underline text-base">{matched.length} ข้อ</span>
                             </div>
 
                             {hasShortage ? (
-                              <div className="p-3 bg-amber-50 border border-amber-300 text-amber-800 rounded-none text-[11px] font-bold leading-relaxed">
+                              <div className="p-3.5 bg-amber-50 border border-amber-300 text-amber-800 rounded-xl text-xs sm:text-sm font-bold leading-relaxed">
                                 คำเตือน: ระบบระบุให้สุ่มข้อสอบ {formRuleCount} ข้อ แต่ในคลังมีเพียง {matched.length} ข้อที่มีสิทธิ์สอบจริง (ระบบจะจำกัดหยิบเฉพาะเท่าที่คลังมีอยู่)
                               </div>
                             ) : (
-                              <div className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-none text-[11px] font-bold leading-relaxed">
+                              <div className="p-3.5 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-xl text-xs sm:text-sm font-bold leading-relaxed">
                                 โครงสร้างสมบูรณ์! เมื่อผู้เข้าสอบเริ่มเข้าทำข้อสอบ ระบบจะทำการสุ่มแยกชุดสอบ {formRuleCount} ข้อจากคลังข้อมูลที่มีทั้งหมด {matched.length} ข้อ มาจัดสอบทันที
                               </div>
                             )}
@@ -1050,72 +1155,72 @@ export default function CampaignManager() {
               ) : (
                 <div className="space-y-4">
                   {/* Shopping Header Controls */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-indigo-50/50 border-2 border-black rounded-none">
-                    <div className="space-y-0.5">
-                      <span className="text-xs font-black text-slate-900 uppercase tracking-tight block">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-indigo-50/50 border-2 border-black rounded-xl">
+                    <div className="space-y-1">
+                      <span className="text-sm sm:text-base font-black text-slate-950 uppercase tracking-tight block">
                         ตะกร้าข้อสอบของห้องสอบนี้ (Shopping Cart Basket)
                       </span>
-                      <span className="text-[10px] text-slate-500 font-bold block">
-                        หยิบข้อสอบใส่ตะกร้าแล้ว: <strong className="text-aapico-blue font-mono text-xs">{formManualQuestionIds.length}</strong> ข้อ (แสดงรายการด้านล่าง)
+                      <span className="text-xs sm:text-sm text-slate-600 font-bold block">
+                        หยิบข้อสอบใส่ตะกร้าแล้ว: <strong className="text-aapico-blue font-mono text-sm sm:text-base">{formManualQuestionIds.length}</strong> ข้อ (แสดงรายการด้านล่าง)
                       </span>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-3">
                       <button
                         type="button"
                         onClick={() => setFormManualQuestionIds([])}
-                        className="px-3.5 py-2 bg-white hover:bg-slate-50 text-rose-600 border border-black text-[10px] font-black uppercase tracking-wider rounded-none transition-all cursor-pointer"
+                        className="px-6 py-3.5 bg-white hover:bg-rose-50 text-rose-600 hover:text-rose-700 border-2 border-black text-xs sm:text-sm font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-[2px_2px_0px_0px_#000000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_#000000]"
                       >
-                        ล้างตะกร้า (Clear)
+                        ล้างตะกร้า (Clear Basket)
                       </button>
                       <button
                         type="button"
                         onClick={() => setIsSelectorModalOpen(true)}
-                        className="inline-flex items-center gap-1.5 px-4.5 py-2 bg-aapico-green hover:bg-[#25b542] text-black border-2 border-black shadow-[2px_2px_0px_0px_#000000] text-[10px] font-black uppercase tracking-widest rounded-none transition-all active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_#000000] cursor-pointer"
+                        className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-[#4ef574] hover:bg-[#25b542] text-black border-2 border-black shadow-[4px_4px_0px_0px_#000000] text-xs sm:text-sm font-black uppercase tracking-wide rounded-xl transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_#000000] cursor-pointer"
                       >
-                        <ShoppingCart size={12} />
-                        เปิดคลังเลือกข้อสอบ (+ หยิบข้อสอบ)
+                        <ShoppingCart size={18} />
+                        เปิดคลังข้อสอบ (+ เลือกหยิบข้อสอบ)
                       </button>
                     </div>
                   </div>
 
                   {/* Selected items basket as Object Cards */}
                   {formManualQuestionIds.length === 0 ? (
-                    <div className="border-2 border-dashed border-slate-300 p-8 text-center bg-slate-50 rounded-none">
-                      <ShoppingBag className="text-slate-300 mx-auto mb-2" size={32} />
-                      <p className="text-xs font-bold text-slate-500 uppercase">ตะกร้าข้อสอบยังว่างเปล่า</p>
-                      <p className="text-[10px] text-slate-400 font-bold mt-1 max-w-xs mx-auto leading-normal">
+                    <div className="border-2 border-dashed border-slate-300 p-10 text-center bg-slate-50 rounded-xl">
+                      <ShoppingBag className="text-slate-300 mx-auto mb-3" size={48} />
+                      <p className="text-sm font-black text-slate-500 uppercase">ตะกร้าข้อสอบยังว่างเปล่า</p>
+                      <p className="text-xs text-slate-400 font-bold mt-2 max-w-sm mx-auto leading-normal">
                         กรุณากดปุ่มสีเขียวด้านบนเพื่อเปิดคลังข้อสอบส่วนกลาง และเลือกหยิบข้อสอบที่คุณต้องการนำไปบรรจุลงในห้องสอบควิซนี้
                       </p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                       {bankQuestions
                         .filter(bq => formManualQuestionIds.includes(bq.id))
                         .map((q, idx) => (
                           <div 
                             key={q.id} 
-                            className="p-4 bg-white border-2 border-black rounded-none shadow-[3px_3px_0px_0px_#000000] hover:translate-x-[-1.5px] hover:translate-y-[-1.5px] hover:shadow-[4.5px_4.5px_0px_0px_#000000] transition-all flex flex-col justify-between"
+                            className="p-5 bg-white border-2 border-black rounded-xl shadow-[4px_4px_0px_0px_#000000] hover:translate-x-[-1.5px] hover:translate-y-[-1.5px] hover:shadow-[5.5px_5.5px_0px_0px_#000000] transition-all flex flex-col justify-between"
                           >
-                            <div className="space-y-1.5">
+                            <div className="space-y-2">
                               <div className="flex items-center justify-between gap-2">
-                                <span className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 text-slate-700 font-mono text-[9px] font-black rounded-none">
+                                <span className="px-2 py-1 bg-slate-100 border border-slate-300 text-slate-700 font-mono text-[10px] font-black rounded-lg">
                                   ITEM #{idx + 1}
                                 </span>
-                                <span className="text-[8px] font-black uppercase bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-none text-aapico-blue">
+                                <span className="text-[10px] font-black uppercase bg-indigo-50 border border-indigo-200 px-2 py-1 rounded-lg text-aapico-blue">
                                   {q.booklet || "ทั่วไป"}
                                 </span>
                               </div>
-                              <p className="text-xs font-black text-slate-800 leading-snug line-clamp-3">{q.text}</p>
+                              <p className="text-sm sm:text-base font-bold text-slate-800 leading-snug line-clamp-3">{q.text}</p>
                             </div>
-                            <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[10px] font-bold text-slate-400">
+                            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-500">
                               <span>{q.options.length} ตัวเลือก</span>
                               <button
                                 type="button"
                                 onClick={() => setFormManualQuestionIds(formManualQuestionIds.filter(id => id !== q.id))}
-                                className="text-[9px] font-black uppercase text-rose-600 hover:text-rose-800 inline-flex items-center gap-1 cursor-pointer"
+                                className="text-xs font-black uppercase text-rose-600 hover:text-rose-800 inline-flex items-center gap-1.5 cursor-pointer"
                               >
-                                <Trash2 size={10} /> เอาออกจากตะกร้า
+                                <Trash2 size={14} /> เอาออกจากตะกร้า
                               </button>
                             </div>
                           </div>
@@ -1241,38 +1346,38 @@ export default function CampaignManager() {
           {/* Background click to close */}
           <div className="absolute inset-0 cursor-pointer" onClick={() => setIsSelectorModalOpen(false)} />
           
-          <div className="relative bg-white border-4 border-black rounded-none w-full max-w-4xl p-6 sm:p-8 shadow-[8px_8px_0px_0px_#000000] my-auto space-y-6">
+          <div className="relative bg-white border-3 border-black rounded-2xl w-full max-w-5xl p-6 sm:p-8 shadow-[8px_8px_0px_0px_#000000] my-auto space-y-6">
             {/* Modal Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b-4 border-black pb-4 gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b-3 border-black pb-4 gap-4">
               <div>
-                <h2 className="text-lg sm:text-xl font-black text-slate-900 font-sans tracking-tight uppercase flex items-center gap-2">
-                  <ShoppingBag className="text-aapico-blue" size={24} />
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900 font-sans tracking-tight uppercase flex items-center gap-2">
+                  <ShoppingBag className="text-[#1D366D]" size={24} />
                   เลือกข้อสอบจากคลัง (Question Catalog)
                 </h2>
-                <p className="text-xs text-slate-500 font-bold">เลือกคลิกหยิบข้อสอบที่ต้องการไปใส่ในตะกร้าข้อสอบของแคมเปญนี้</p>
+                <p className="text-xs sm:text-sm text-slate-500 font-bold">เลือกคลิกหยิบข้อสอบที่ต้องการไปใส่ในตะกร้าข้อสอบของแคมเปญนี้</p>
               </div>
               <div className="flex items-center gap-3">
-                <span className="px-3.5 py-1.5 bg-indigo-50 border-2 border-black rounded-none text-xs font-black text-aapico-blue font-mono shadow-[2px_2px_0px_0px_#000000]">
+                <span className="px-4 py-2 bg-indigo-50 border-2 border-black rounded-xl text-xs sm:text-sm font-black text-aapico-blue font-mono shadow-[2px_2px_0px_0px_#000000]">
                   เลือกแล้ว: {formManualQuestionIds.length} ข้อ
                 </span>
                 <button
                   type="button"
                   onClick={() => setIsSelectorModalOpen(false)}
-                  className="p-1.5 hover:bg-slate-100 rounded-none border border-black transition-all cursor-pointer bg-white active:translate-x-[1px] active:translate-y-[1px]"
+                  className="p-2 hover:bg-slate-100 rounded-xl border-2 border-black transition-all cursor-pointer bg-white active:translate-x-[1px] active:translate-y-[1px]"
                 >
-                  <X size={18} />
+                  <X size={20} />
                 </button>
               </div>
             </div>
 
             {/* Filters (Catalog sections) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1.5 font-mono">1. เลือกประเภทชุดข้อสอบ (Filter by Booklet)</label>
+                <label className="block text-xs sm:text-sm font-black uppercase tracking-wide text-slate-700 mb-2 font-mono">1. เลือกประเภทชุดข้อสอบ (Filter by Booklet)</label>
                 <select
                   value={formTargetBooklet}
                   onChange={(e) => setFormTargetBooklet(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border-2 border-black rounded-none text-xs font-bold focus:outline-none"
+                  className="w-full px-4.5 py-3 bg-white border-2 border-black rounded-xl text-sm sm:text-base font-bold focus:outline-none"
                 >
                   {packets.map(p => (
                     <option key={p.id} value={p.name}>{p.name}</option>
@@ -1280,15 +1385,15 @@ export default function CampaignManager() {
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1.5 font-mono">2. ค้นหาข้อความคำถาม (Search Question)</label>
+                <label className="block text-xs sm:text-sm font-black uppercase tracking-wide text-slate-700 mb-2 font-mono">2. ค้นหาข้อความคำถาม (Search Question)</label>
                 <div className="relative">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                   <input
                     type="text"
                     placeholder="ค้นหาตามโจทย์คำถาม..."
                     value={bankSearchTerm}
                     onChange={(e) => setBankSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2.5 bg-white border-2 border-black rounded-none text-xs font-bold focus:outline-none"
+                    className="w-full pl-11 pr-4.5 py-3 bg-white border-2 border-black rounded-xl text-sm sm:text-base font-bold focus:outline-none"
                   />
                 </div>
               </div>
@@ -1296,7 +1401,7 @@ export default function CampaignManager() {
 
             {/* Catalog items Grid (UX Shopping style) */}
             <div className="space-y-3">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-mono">รายการข้อสอบที่มีในคลัง (Central Catalog Items)</span>
+              <span className="text-xs sm:text-sm font-black text-slate-400 uppercase tracking-wide block font-mono">รายการข้อสอบที่มีในคลัง (Central Catalog Items)</span>
               
               {(() => {
                 const filteredList = bankQuestions.filter(bq => {
@@ -1307,14 +1412,14 @@ export default function CampaignManager() {
 
                 if (filteredList.length === 0) {
                   return (
-                    <div className="p-8 text-center border-2 border-dashed border-slate-300 rounded-none bg-slate-50">
-                      <p className="text-xs text-slate-400 font-bold">ไม่พบข้อสอบอื่นในชุดข้อสอบ "{formTargetBooklet}" ที่ตรงกับคำค้นหาของคุณ</p>
+                    <div className="p-10 text-center border-2 border-dashed border-slate-300 rounded-xl bg-slate-50">
+                      <p className="text-sm text-slate-400 font-bold">ไม่พบข้อสอบอื่นในชุดข้อสอบ "{formTargetBooklet}" ที่ตรงกับคำค้นหาของคุณ</p>
                     </div>
                   );
                 }
 
                 return (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {filteredList.map((bq, idx) => {
                       const isSelected = formManualQuestionIds.includes(bq.id);
                       return (
@@ -1327,39 +1432,39 @@ export default function CampaignManager() {
                               setFormManualQuestionIds([...formManualQuestionIds, bq.id]);
                             }
                           }}
-                          className={`p-4 border-2 rounded-none transition-all cursor-pointer flex flex-col justify-between select-none ${
+                          className={`p-5 border-2 rounded-xl transition-all cursor-pointer flex flex-col justify-between select-none ${
                             isSelected
                               ? "border-black bg-indigo-50/40 shadow-[4px_4px_0px_0px_#000000] hover:translate-x-[-1px] hover:translate-y-[-1px]"
                               : "border-black bg-white hover:bg-slate-50 shadow-[3px_3px_0px_0px_#000000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1.5px_1.5px_0px_0px_#000000]"
                           }`}
                         >
-                          <div className="space-y-2">
+                          <div className="space-y-3.5">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 text-slate-600 font-mono text-[9px] font-black rounded-none">
+                              <span className="px-2 py-0.5 bg-slate-100 border border-slate-300 text-slate-600 font-mono text-[10px] font-black rounded-lg">
                                 ID: {bq.id.toUpperCase()}
                               </span>
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[8px] font-black uppercase bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-none text-amber-700">
+                                <span className="text-[10px] font-black uppercase bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg text-amber-700">
                                   {bq.booklet || "ทั่วไป"}
                                 </span>
-                                <div className={`w-4 h-4 rounded-none border-2 border-black flex items-center justify-center ${
-                                  isSelected ? "bg-aapico-green" : "bg-white"
+                                <div className={`w-5 h-5 rounded-lg border-2 border-black flex items-center justify-center ${
+                                  isSelected ? "bg-[#4ef574]" : "bg-white"
                                 }`}>
-                                  {isSelected && <Check className="text-black" size={10} strokeWidth={4} />}
+                                  {isSelected && <Check className="text-black" size={12} strokeWidth={4} />}
                                 </div>
                               </div>
                             </div>
-                            <p className="text-xs font-black text-slate-800 leading-snug">{bq.text}</p>
-                            <div className="space-y-1 pt-1">
+                            <p className="text-sm sm:text-base font-bold text-slate-800 leading-snug">{bq.text}</p>
+                            <div className="space-y-1.5 pt-1">
                               {bq.options.map((opt, oIdx) => (
-                                <div key={oIdx} className="text-[10px] text-slate-500 font-semibold flex items-start gap-1">
+                                <div key={oIdx} className="text-xs sm:text-sm text-slate-600 font-semibold flex items-start gap-1.5">
                                   <span className="text-slate-400 font-mono">{oIdx + 1})</span>
-                                  <span className={oIdx === bq.correctIndex ? "text-aapico-green font-bold" : ""}>{opt}</span>
+                                  <span className={oIdx === bq.correctIndex ? "text-[#1fa43a] font-bold" : ""}>{opt}</span>
                                 </div>
                               ))}
                             </div>
                           </div>
-                          <div className="mt-3 pt-2.5 border-t border-dashed border-slate-100 flex items-center justify-between text-[10px] text-slate-400 font-bold">
+                          <div className="mt-4 pt-3 border-t border-dashed border-slate-100 flex items-center justify-between text-xs text-slate-400 font-bold">
                             <span>คำอธิบายเฉลย: {bq.explanation ? "มี" : "ไม่มี"}</span>
                             <span className={isSelected ? "text-aapico-blue font-black" : "text-slate-500 font-bold"}>
                               {isSelected ? "หยิบใส่ตะกร้าแล้ว" : "คลิกเพื่อเลือก"}
@@ -1374,18 +1479,18 @@ export default function CampaignManager() {
             </div>
 
             {/* Done Button Footer */}
-            <div ref={modalFooterRef} className="border-t-4 border-black pt-5 flex justify-between items-center gap-4">
+            <div ref={modalFooterRef} className="border-t-3 border-black pt-5 flex flex-col sm:flex-row justify-between items-center gap-4">
               <button
                 type="button"
                 onClick={() => setFormManualQuestionIds([])}
-                className="px-4 py-2 border-2 border-black bg-white hover:bg-slate-50 text-rose-600 hover:text-rose-700 text-xs font-black uppercase tracking-wider rounded-none transition-all shadow-[2px_2px_0px_0px_#000000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_#000000] cursor-pointer"
+                className="w-full sm:w-auto px-6 py-3.5 border-2 border-black bg-white hover:bg-rose-50 text-rose-600 hover:text-rose-700 text-xs sm:text-sm font-black uppercase tracking-wider rounded-xl transition-all shadow-[2px_2px_0px_0px_#000000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_#000000] cursor-pointer"
               >
                 ล้างตะกร้าข้อสอบทั้งหมด
               </button>
               <button
                 type="button"
                 onClick={() => setIsSelectorModalOpen(false)}
-                className="px-6 py-3 bg-aapico-green hover:bg-[#25b542] border-2 border-black text-black text-xs font-black uppercase tracking-widest rounded-none transition-all shadow-[3px_3px_0px_0px_#000000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_#000000] cursor-pointer"
+                className="w-full sm:w-auto px-8 py-3.5 bg-[#4ef574] hover:bg-[#25b542] border-2 border-black text-black text-xs sm:text-sm font-black uppercase tracking-wider rounded-xl transition-all shadow-[4px_4px_0px_0px_#000000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_#000000] cursor-pointer"
               >
                 ตกลงและบันทึกใส่ตะกร้า ({formManualQuestionIds.length})
               </button>
@@ -1404,9 +1509,9 @@ export default function CampaignManager() {
                 onClick={() => {
                   modalFooterRef.current?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="inline-flex items-center gap-2 px-4 py-3 bg-amber-400 hover:bg-amber-500 active:scale-95 text-slate-950 text-xs font-black uppercase tracking-wider rounded-none border-2 border-black shadow-[4px_4px_0px_0px_#000000] transition-all cursor-pointer animate-pulse"
+                className="inline-flex items-center gap-2 px-5 py-3.5 bg-amber-400 hover:bg-amber-500 active:scale-95 text-slate-950 text-xs sm:text-sm font-black uppercase tracking-wider rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000000] transition-all cursor-pointer animate-pulse"
               >
-                <ArrowRight className="rotate-90 shrink-0 animate-bounce" size={14} />
+                <ArrowRight className="rotate-90 shrink-0 animate-bounce" size={16} />
                 <span>ข้ามไปปุ่มบันทึกด้านล่าง (Skip to Save)</span>
               </button>
             </div>

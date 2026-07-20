@@ -393,6 +393,32 @@ const campaignDbs = new Map<string, Database.Database>();
 const liveClients = new Map<string, any[]>();
 const activeParticipants = new Map<string, Map<string, any>>();
 
+// Stress-test simulation timeouts tracking to allow 100% reliable aborts
+const activeStressTestTimeouts = new Map<string, Set<any>>();
+
+function clearCampaignStressTest(campaignId: string) {
+  const timeouts = activeStressTestTimeouts.get(campaignId);
+  if (timeouts) {
+    for (const timeout of timeouts) {
+      clearTimeout(timeout);
+    }
+    timeouts.clear();
+  }
+}
+
+function scheduleCampaignStressTestTimeout(campaignId: string, fn: () => void, delay: number) {
+  if (!activeStressTestTimeouts.has(campaignId)) {
+    activeStressTestTimeouts.set(campaignId, new Set());
+  }
+  const timeouts = activeStressTestTimeouts.get(campaignId)!;
+  const timeoutId = setTimeout(() => {
+    timeouts.delete(timeoutId);
+    fn();
+  }, delay);
+  timeouts.add(timeoutId);
+  return timeoutId;
+}
+
 function getCampaignDb(campaignId: string): Database.Database {
   // Validate campaignId to prevent directory traversal
   if (!/^[a-zA-Z0-9_-]+$/.test(campaignId)) {
@@ -468,7 +494,12 @@ async function startServer() {
   // Middleware to authenticate admin token via JWT
   const authenticateAdminToken = (req: any, res: any, next: any) => {
     const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(" ")[1];
+    let token = authHeader && authHeader.split(" ")[1];
+
+    // Fallback: Check token in query parameters (for EventSource or simple GET links)
+    if (!token && req.query && req.query.token) {
+      token = req.query.token;
+    }
 
     if (!token) {
       return res.status(401).json({ error: "Access Denied: ไม่พบสิทธิ์การเข้าใช้งาน (Missing Authorization Token)" });
@@ -962,6 +993,10 @@ async function startServer() {
       }
 
       // 3. Reset active participant states and live socket connections
+      for (const id of activeStressTestTimeouts.keys()) {
+        clearCampaignStressTest(id);
+      }
+      activeStressTestTimeouts.clear();
       liveClients.clear();
       activeParticipants.clear();
 
@@ -1474,6 +1509,7 @@ async function startServer() {
           ruleDifficulty: row.rule_difficulty || "all",
           ruleCount: row.rule_count || 0,
           targetBooklet: row.target_booklet || "",
+          activeTakersCount: activeParticipants.get(row.id)?.size || 0,
         };
       });
       res.json(campaigns);
@@ -1648,6 +1684,9 @@ async function startServer() {
     try {
       const { id } = req.params;
 
+      // Halt any active stress-test loops immediately
+      clearCampaignStressTest(id);
+
       // Validate campaign existence
       const campaign = masterDb.prepare("SELECT id, name FROM campaigns WHERE id = ?").get(id) as any;
       if (!campaign) {
@@ -1692,6 +1731,9 @@ async function startServer() {
   app.delete("/api/campaigns/:id", (req, res) => {
     try {
       const { id } = req.params;
+
+      // Halt any active stress-test loops immediately
+      clearCampaignStressTest(id);
 
       const stmt = masterDb.prepare("DELETE FROM campaigns WHERE id = ?");
       stmt.run(id);
@@ -2257,8 +2299,9 @@ async function startServer() {
     const { id } = req.params;
     
     res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
     res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
     
     res.write(`data: ${JSON.stringify({ type: "connected" })}\n\n`);
     
@@ -2281,7 +2324,7 @@ async function startServer() {
   app.post("/api/campaigns/:id/join", express.json(), (req, res) => {
     try {
       const { id } = req.params;
-      const { userIdentifier, userName, department } = req.body;
+      const { userIdentifier, userName, department, company } = req.body;
       if (!userIdentifier || !userName) {
         return res.status(400).json({ error: "Missing identity details" });
       }
@@ -2294,6 +2337,7 @@ async function startServer() {
         userIdentifier,
         userName,
         department: department || "",
+        company: company || "",
         joinedAt: new Date().toISOString()
       });
 
@@ -2306,6 +2350,7 @@ async function startServer() {
             userIdentifier,
             userName,
             department: department || "",
+            company: company || "",
             status: "JOINED"
           }
         });
@@ -2378,6 +2423,9 @@ async function startServer() {
     try {
       const { id } = req.params;
 
+      // Halt any active stress-test loops immediately before initializing
+      clearCampaignStressTest(id);
+
       // Ensure campaign exists
       const campStmt = masterDb.prepare("SELECT * FROM campaigns WHERE id = ?");
       const campaign = campStmt.get(id) as any;
@@ -2401,6 +2449,17 @@ async function startServer() {
         activeParticipants.set(id, new Map());
       }
 
+      // Notify SSE clients of reset so the Live Lobby clears immediately
+      const clients = liveClients.get(id);
+      if (clients && clients.length > 0) {
+        const resetPayload = JSON.stringify({ type: "reset" });
+        clients.forEach((client) => {
+          try {
+            client.write(`data: ${resetPayload}\n\n`);
+          } catch (e) {}
+        });
+      }
+
       const thaiFirstNames = [
         "สมชาย", "สมศรี", "วิชัย", "อนันต์", "นารี", "ประเสริฐ", "นงลักษณ์", "พงษ์ศักดิ์", "สุรพล", "วรรณดี",
         "เกียรติ", "รัตนา", "บุญมี", "สายเพลิน", "มานพ", "ศิริพร", "ไพโรจน์", "กาญจนา", "อภิชาติ", "จีรพันธ์",
@@ -2418,6 +2477,9 @@ async function startServer() {
 
       const departments = ["IT", "HR", "Accounting", "Marketing", "Sales", "Production", "Quality Control", "Engineering", "Purchasing", "Logistics"];
       const companies = ["Aapico Hitech", "Aapico Plastics", "Aapico Forging", "Aapico ITS", "Aapico Structural"];
+
+      const questions = JSON.parse(campaign.questions_json || "[]");
+      const totalQuestions = questions.length || 10;
 
       const participants = [];
       for (let i = 0; i < 100; i++) {
@@ -2441,7 +2503,7 @@ async function startServer() {
       }
 
       // Helper function for submission execution
-      const executeSubmit = (p: any, attemptNum: number) => {
+      function executeSubmit(p: any, attemptNum: number) {
         // First attempt: 40% pass. Second attempt: 66% of remaining pass. Third attempt: 100% pass.
         const isPassing = attemptNum === 1
           ? Math.random() < 0.40
@@ -2449,7 +2511,6 @@ async function startServer() {
             ? Math.random() < 0.66
             : true;
 
-        const totalQuestions = 20;
         const passingPct = campaign.passing_percentage || 60;
         let score = 0;
         let correctAnswers = 0;
@@ -2460,15 +2521,23 @@ async function startServer() {
           if (correctAnswers > totalQuestions) correctAnswers = totalQuestions;
           score = (correctAnswers / totalQuestions) * 100;
         } else {
-          const maxCorrect = Math.ceil((passingPct / 100) * totalQuestions) - 1;
-          correctAnswers = Math.floor(Math.random() * (maxCorrect + 1));
-          if (correctAnswers < 0) correctAnswers = 0;
+          const maxCorrect = Math.floor((passingPct / 100) * totalQuestions) - 1;
+          correctAnswers = Math.max(0, Math.floor(Math.random() * (maxCorrect + 1)));
           score = (correctAnswers / totalQuestions) * 100;
         }
 
         const passed = isPassing ? 1 : 0;
         const submittedAt = new Date().toISOString();
         const durationSeconds = 30 + Math.floor(Math.random() * 90);
+
+        const mockAnswers: Record<string, string> = {};
+        questions.forEach((q: any) => {
+          if (q.options && q.options.length > 0) {
+            mockAnswers[q.id] = q.options[Math.floor(Math.random() * q.options.length)];
+          } else {
+            mockAnswers[q.id] = "";
+          }
+        });
 
         try {
           const sDb = getCampaignDb(id);
@@ -2490,7 +2559,7 @@ async function startServer() {
             passed,
             submittedAt,
             durationSeconds,
-            JSON.stringify({})
+            JSON.stringify(mockAnswers)
           );
         } catch (e) {
           console.error("Failed to insert mock submission in stress test:", e);
@@ -2502,8 +2571,8 @@ async function startServer() {
         }
 
         // Notify SSE clients of submission
-        const clients = liveClients.get(id);
-        if (clients && clients.length > 0) {
+        const liveClientsList = liveClients.get(id);
+        if (liveClientsList && liveClientsList.length > 0) {
           const payloadStr = JSON.stringify({
             type: "submission",
             submission: {
@@ -2520,10 +2589,10 @@ async function startServer() {
               passed: isPassing,
               submittedAt,
               durationSeconds,
-              answers: {}
+              answers: mockAnswers
             }
           });
-          clients.forEach((client) => {
+          liveClientsList.forEach((client) => {
             try {
               client.write(`data: ${payloadStr}\n\n`);
             } catch (e) {}
@@ -2531,15 +2600,15 @@ async function startServer() {
         }
 
         if (!isPassing) {
-          // Retry loop: Join again after 1.5 - 2.5 seconds
-          setTimeout(() => {
+          // Retry loop: Join again after 1.5 - 2.5 seconds using managed timeout
+          scheduleCampaignStressTestTimeout(id, () => {
             executeJoin(p, attemptNum + 1);
           }, 1500 + Math.random() * 1000);
         }
-      };
+      }
 
       // Helper function for join execution
-      const executeJoin = (p: any, attemptNum: number) => {
+      function executeJoin(p: any, attemptNum: number) {
         if (!activeParticipants.has(id)) {
           activeParticipants.set(id, new Map());
         }
@@ -2548,37 +2617,39 @@ async function startServer() {
           userIdentifier: p.userIdentifier,
           userName: p.userName,
           department: p.department,
+          company: p.company || "",
           joinedAt: new Date().toISOString()
         });
 
         // Notify SSE clients of join
-        const clients = liveClients.get(id);
-        if (clients && clients.length > 0) {
+        const liveClientsList = liveClients.get(id);
+        if (liveClientsList && liveClientsList.length > 0) {
           const payloadStr = JSON.stringify({
             type: "join",
             participant: {
               userIdentifier: p.userIdentifier,
               userName: p.userName,
               department: p.department,
+              company: p.company || "",
               status: "JOINED"
             }
           });
-          clients.forEach((client) => {
+          liveClientsList.forEach((client) => {
             try {
               client.write(`data: ${payloadStr}\n\n`);
             } catch (e) {}
           });
         }
 
-        // Schedule submission after 2 - 4 seconds
-        setTimeout(() => {
+        // Schedule submission after 2 - 4 seconds using managed timeout
+        scheduleCampaignStressTestTimeout(id, () => {
           executeSubmit(p, attemptNum);
         }, 2000 + Math.random() * 2000);
-      };
+      }
 
-      // Start staggering the 100 participants over 15 seconds
+      // Start staggering the 100 participants over 15 seconds using managed timeouts
       participants.forEach((p, index) => {
-        setTimeout(() => {
+        scheduleCampaignStressTestTimeout(id, () => {
           executeJoin(p, 1);
         }, index * 150);
       });
@@ -2594,6 +2665,9 @@ async function startServer() {
   app.post("/api/campaigns/:id/simulate", express.json(), (req, res) => {
     try {
       const { id } = req.params;
+
+      // Halt any active stress-test loops immediately before initializing static simulation
+      clearCampaignStressTest(id);
 
       // Ensure campaign exists
       const campStmt = masterDb.prepare("SELECT * FROM campaigns WHERE id = ?");
@@ -2617,6 +2691,18 @@ async function startServer() {
       } else {
         activeParticipants.set(id, new Map());
       }
+
+      // Notify SSE clients of reset so the Live Lobby clears immediately
+      const liveClientsList = liveClients.get(id);
+      if (liveClientsList && liveClientsList.length > 0) {
+        const resetPayload = JSON.stringify({ type: "reset" });
+        liveClientsList.forEach((client) => {
+          try {
+            client.write(`data: ${resetPayload}\n\n`);
+          } catch (e) {}
+        });
+      }
+
       const participantsMap = activeParticipants.get(id)!;
 
       const thaiFirstNames = [
@@ -2685,6 +2771,7 @@ async function startServer() {
               userIdentifier: empId,
               userName: fullName,
               department: dept,
+              company: company,
               status: "JOINED"
             }
           });

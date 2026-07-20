@@ -22,6 +22,30 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
   const [activeParticipants, setActiveParticipants] = useState<any[]>([]);
   const [analyticsTab, setAnalyticsTab] = useState<"overview" | "diagnostics" | "live_lobby" | "attendance" | "sandbox">("overview");
   
+  // Tour Step Synchronizer for Live Lobby Tab
+  useEffect(() => {
+    // 1. Instantly check localStorage on mount
+    try {
+      const savedTourActive = localStorage.getItem("aapico_tour_active") === "true";
+      const savedTourStep = localStorage.getItem("aapico_tour_step");
+      if (savedTourActive && savedTourStep === "7") {
+        setAnalyticsTab("live_lobby");
+      }
+    } catch (_) {}
+
+    // 2. Fallback Event Listener
+    const handleTourStepChange = (e: CustomEvent) => {
+      const step = e.detail.step;
+      if (step === 7) {
+        setAnalyticsTab("live_lobby");
+      }
+    };
+    window.addEventListener("tour-step-changed", handleTourStepChange as any);
+    return () => {
+      window.removeEventListener("tour-step-changed", handleTourStepChange as any);
+    };
+  }, []);
+  
   // State for Attendance & Status Tracker
   const [attendanceList, setAttendanceList] = useState<AttendanceItem[]>(() => {
     try {
@@ -574,66 +598,84 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
     fetchSubmissions();
     fetchActiveParticipants();
 
-    // SSE connection for real-time live board updates
-    const eventSource = new EventSource(`/api/campaigns/${campaign.id}/live`);
+    let eventSource: EventSource | null = null;
+    let reconnectTimeout: any = null;
 
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "join") {
-          const newPart = data.participant;
-          setActiveParticipants((prev) => {
-            const exists = prev.some((p) => p.userIdentifier === newPart.userIdentifier);
-            if (exists) return prev;
-            return [...prev, newPart];
-          });
-        } else if (data.type === "reset") {
-          // Dynamic SSE wiping of states
-          setActiveParticipants([]);
-          setSubmissions([]);
-          setAttendanceList([]);
-        } else if (data.type === "submission") {
-          const newSub: Submission = data.submission;
-          
-          // Remove from active participants since they submitted
-          setActiveParticipants((prev) => prev.filter((p) => p.userIdentifier !== newSub.userIdentifier));
-
-          // Add to current submissions array if it doesn't already exist
-          setSubmissions((prev) => {
-            const exists = prev.some(
-              (s) =>
-                s.userIdentifier === newSub.userIdentifier &&
-                Math.abs(new Date(s.submittedAt).getTime() - new Date(newSub.submittedAt).getTime()) < 2000
-            );
-            if (exists) return prev;
-            return [newSub, ...prev];
-          });
-
-          // Trigger celebratory announcement if student passed
-          if (newSub.passed) {
-            const toastId = `${newSub.userIdentifier}-${Date.now()}-${Math.random()}`;
-            setToastQueue((prev) => [
-              ...prev,
-              {
-                id: toastId,
-                userName: newSub.userName,
-                score: newSub.score
-              }
-            ]);
-          }
-        }
-      } catch (err) {
-        console.error("Error handling SSE event message:", err);
+    const connectSSE = () => {
+      if (eventSource) {
+        eventSource.close();
       }
+
+      const token = localStorage.getItem("authenticated_admin_token") || "";
+      eventSource = new EventSource(`/api/campaigns/${campaign.id}/live?token=${encodeURIComponent(token)}`);
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "join") {
+            const newPart = data.participant;
+            setActiveParticipants((prev) => {
+              const exists = prev.some((p) => p.userIdentifier === newPart.userIdentifier);
+              if (exists) return prev;
+              return [...prev, newPart];
+            });
+          } else if (data.type === "reset") {
+            // Dynamic SSE wiping of states
+            setActiveParticipants([]);
+            setSubmissions([]);
+          } else if (data.type === "submission") {
+            const newSub: Submission = data.submission;
+            
+            // Remove from active participants since they submitted
+            setActiveParticipants((prev) => prev.filter((p) => p.userIdentifier !== newSub.userIdentifier));
+
+            // Add to current submissions array if it doesn't already exist
+            setSubmissions((prev) => {
+              const exists = prev.some(
+                (s) =>
+                  s.userIdentifier === newSub.userIdentifier &&
+                  Math.abs(new Date(s.submittedAt).getTime() - new Date(newSub.submittedAt).getTime()) < 2000
+              );
+              if (exists) return prev;
+              return [newSub, ...prev];
+            });
+
+            // Trigger celebratory announcement if student passed
+            if (newSub.passed) {
+              const toastId = `${newSub.userIdentifier}-${Date.now()}-${Math.random()}`;
+              setToastQueue((prev) => [
+                ...prev,
+                {
+                  id: toastId,
+                  userName: newSub.userName,
+                  score: newSub.score
+                }
+              ]);
+            }
+          }
+        } catch (err) {
+          console.error("Error handling SSE event message:", err);
+        }
+      };
+
+      eventSource.onerror = (err) => {
+        console.warn("Real-time EventSource connection issue or closed. Reconnecting in 3 seconds...", err);
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+        }
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = setTimeout(connectSSE, 3000);
+      };
     };
 
-    eventSource.onerror = (err) => {
-      console.warn("Real-time EventSource connection issue or closed, closing connection.", err);
-      eventSource.close();
-    };
+    connectSSE();
 
     return () => {
-      eventSource.close();
+      if (eventSource) {
+        eventSource.close();
+      }
+      clearTimeout(reconnectTimeout);
     };
   }, [campaign.id]);
 
@@ -1212,10 +1254,12 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
 
             for (let i = submissions.length - 1; i >= 0; i--) {
               const s = submissions[i];
+              const resolved = resolveAttendanceDetails(s.userIdentifier, s.userName, s.department, s.company);
               lobbyMap.set(s.userIdentifier, {
                 userIdentifier: s.userIdentifier,
-                userName: s.userName,
-                department: s.department || "",
+                userName: resolved.userName,
+                department: resolved.department,
+                company: resolved.company,
                 status: s.passed ? "PASSED" : "FAILED",
                 score: s.score,
                 correctAnswers: s.correctAnswers,
@@ -1225,10 +1269,12 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
             }
 
             activeParticipants.forEach((p) => {
+              const resolved = resolveAttendanceDetails(p.userIdentifier, p.userName, p.department, p.company);
               lobbyMap.set(p.userIdentifier, {
                 userIdentifier: p.userIdentifier,
-                userName: p.userName,
-                department: p.department || "",
+                userName: resolved.userName,
+                department: resolved.department,
+                company: resolved.company,
                 status: "JOINED",
                 score: 0,
                 correctAnswers: 0,
@@ -1252,6 +1298,7 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
 
             return (
               <div 
+                id="tour-admin-live-lobby"
                 ref={lobbyRef} 
                 className={`${
                   isFullscreen 
@@ -1260,9 +1307,9 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
                 }`}
               >
                 {/* Lobby Monitor Banner Header */}
-                <div className="rounded-none border-3 border-black shadow-[4px_4px_0px_0px_#464C59] flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-3.5 bg-slate-950 shrink-0 gap-3 sm:gap-4">
+                <div className="rounded-none border-3 border-[#1D366D] shadow-[4px_4px_0px_0px_rgba(29,54,109,1)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-3.5 bg-[#1D366D] shrink-0 gap-3 sm:gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="bg-[#2DC84D] text-black px-2.5 py-1.5 rounded-none border-2 border-black flex items-center gap-2 font-black text-xs font-sans uppercase tracking-tight select-none shrink-0 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                    <div className="bg-[#2DC84D] text-black px-2.5 py-1.5 rounded-none border-2 border-[#1D366D] flex items-center gap-2 font-black text-xs font-sans uppercase tracking-tight select-none shrink-0 shadow-[1px_1px_0px_0px_rgba(29,54,109,1)]">
                       <span className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-600 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
@@ -1281,13 +1328,13 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
                   <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
                     <div className="flex flex-row items-center gap-2">
                       <span className="text-[9px] font-black text-slate-400 font-mono uppercase hidden xs:block">ขนาด</span>
-                      <div className="flex bg-slate-900 border border-slate-800 p-0.5 rounded-none">
+                      <div className="flex bg-[#11224d] border border-[#1d3557] p-0.5 rounded-none">
                         {(["auto", "large", "medium", "small"] as const).map((sz) => (
                           <button
                             key={sz}
                             type="button"
                             onClick={() => setLobbyCardSize(sz)}
-                            className={`px-2 py-1 rounded-none text-[9px] font-black uppercase transition-all cursor-pointer ${
+                            className={`lobby-sz-btn px-2 py-1 rounded-none text-[9px] font-black uppercase transition-all cursor-pointer ${
                               lobbyCardSize === sz
                                 ? "bg-[#2DC84D] text-black shadow-[1px_1px_0px_0px_rgba(255,255,255,0.15)]"
                                 : "text-slate-400 hover:text-white"
@@ -1302,7 +1349,7 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
                     <button
                       type="button"
                       onClick={toggleFullscreen}
-                      className="flex items-center gap-1.5 py-2 px-3 bg-aapico-blue hover:bg-indigo-900 text-white border-3 border-black rounded-none text-[10px] font-black uppercase tracking-wider shadow-[2px_2px_0px_0px_#464C59] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all cursor-pointer font-sans"
+                      className="flex items-center gap-1.5 py-2 px-3 bg-aapico-blue hover:bg-[#11224d] text-white border-3 border-[#1D366D] rounded-none text-[10px] font-black uppercase tracking-wider shadow-[2px_2px_0px_0px_rgba(29,54,109,1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all cursor-pointer font-sans"
                     >
                       <Tv size={12} />
                       <span className="hidden sm:inline">{isFullscreen ? "ย่อหน้าจอ" : "FULLSCREEN"}</span>
@@ -1334,16 +1381,16 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
                         onClick={() => setLobbyFilter("all")}
                         className={`px-3 py-2 border-3 rounded-none flex items-center justify-between font-black uppercase tracking-wider text-[10px] sm:text-[11px] transition-all cursor-pointer h-10 md:h-11 select-none shrink-0 md:shrink-1 ${
                           lobbyFilter === "all"
-                            ? "bg-slate-950 text-white border-slate-950 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                            : "bg-[#FFFFFF] text-slate-700 border-black shadow-[1px_1px_0px_0px_#464C59] hover:bg-slate-100"
+                            ? "bg-[#1D366D] text-white border-[#1D366D] shadow-[2px_2px_0px_0px_rgba(29,54,109,1)]"
+                            : "bg-[#FFFFFF] text-slate-700 border-[#1D366D] shadow-[1px_1px_0px_0px_rgba(29,54,109,1)] hover:bg-slate-100"
                         }`}
                       >
                         <div className="flex items-center gap-1.5 truncate">
-                          <span className="w-2 h-2 rounded-none bg-slate-400 border border-black shrink-0" />
+                          <span className="w-2 h-2 rounded-none bg-slate-400 border border-[#1D366D] shrink-0" />
                           <span className="font-sans truncate">ALL</span>
                         </div>
                         <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-none shrink-0 ml-2 ${
-                          lobbyFilter === "all" ? "bg-white text-slate-950 font-black" : "bg-slate-200 text-slate-800 font-bold"
+                          lobbyFilter === "all" ? "bg-white text-[#1D366D] font-black" : "bg-slate-200 text-slate-800 font-bold"
                         }`}>
                           {lobbyList.length}
                         </span>
@@ -1354,16 +1401,16 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
                         onClick={() => setLobbyFilter("JOINED")}
                         className={`px-3 py-2 border-3 rounded-none flex items-center justify-between font-black uppercase tracking-wider text-[10px] sm:text-[11px] transition-all cursor-pointer h-10 md:h-11 select-none shrink-0 md:shrink-1 ${
                           lobbyFilter === "JOINED"
-                            ? "bg-sky-400 text-slate-950 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                            : "bg-[#FFFFFF] text-slate-600 border-black hover:bg-sky-50 shadow-[1px_1px_0px_0px_#464C59]"
+                            ? "bg-sky-400 text-slate-950 border-[#1D366D] shadow-[2px_2px_0px_0px_rgba(29,54,109,1)]"
+                            : "bg-[#FFFFFF] text-slate-600 border-[#1D366D] hover:bg-sky-50 shadow-[1px_1px_0px_0px_rgba(29,54,109,1)]"
                         }`}
                       >
                         <div className="flex items-center gap-1.5 truncate">
-                          <span className="w-2 h-2 rounded-none bg-sky-500 border border-black shrink-0" />
+                          <span className="w-2 h-2 rounded-none bg-sky-500 border border-[#1D366D] shrink-0" />
                           <span className="font-sans truncate">JOINED</span>
                         </div>
                         <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-none shrink-0 ml-2 ${
-                          lobbyFilter === "JOINED" ? "bg-slate-950 text-white font-black" : "bg-sky-100 text-sky-850 font-bold"
+                          lobbyFilter === "JOINED" ? "bg-[#1D366D] text-white font-black" : "bg-sky-100 text-sky-850 font-bold"
                         }`}>
                           {activeJoinedCount}
                         </span>
@@ -1374,16 +1421,16 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
                         onClick={() => setLobbyFilter("PASSED")}
                         className={`px-3 py-2 border-3 rounded-none flex items-center justify-between font-black uppercase tracking-wider text-[10px] sm:text-[11px] transition-all cursor-pointer h-10 md:h-11 select-none shrink-0 md:shrink-1 ${
                           lobbyFilter === "PASSED"
-                            ? "bg-[#2DC84D] text-black border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                            : "bg-[#FFFFFF] text-slate-600 border-black hover:bg-emerald-50 shadow-[1px_1px_0px_0px_#464C59]"
+                            ? "bg-[#2DC84D] text-black border-[#1D366D] shadow-[2px_2px_0px_0px_rgba(29,54,109,1)]"
+                            : "bg-[#FFFFFF] text-slate-600 border-[#1D366D] hover:bg-emerald-50 shadow-[1px_1px_0px_0px_rgba(29,54,109,1)]"
                         }`}
                       >
                         <div className="flex items-center gap-1.5 truncate">
-                          <span className="w-2 h-2 rounded-none bg-[#2DC84D] border border-black shrink-0" />
+                          <span className="w-2 h-2 rounded-none bg-[#2DC84D] border border-[#1D366D] shrink-0" />
                           <span className="font-sans truncate">PASSED</span>
                         </div>
                         <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-none shrink-0 ml-2 ${
-                          lobbyFilter === "PASSED" ? "bg-slate-950 text-white font-black" : "bg-emerald-100 text-emerald-850 font-bold"
+                          lobbyFilter === "PASSED" ? "bg-[#1D366D] text-white font-black" : "bg-emerald-100 text-emerald-850 font-bold"
                         }`}>
                           {livePassedCount}
                         </span>
@@ -1394,16 +1441,16 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
                         onClick={() => setLobbyFilter("FAILED")}
                         className={`px-3 py-2 border-3 rounded-none flex items-center justify-between font-black uppercase tracking-wider text-[10px] sm:text-[11px] transition-all cursor-pointer h-10 md:h-11 select-none shrink-0 md:shrink-1 ${
                           lobbyFilter === "FAILED"
-                            ? "bg-rose-400 text-slate-950 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                            : "bg-[#FFFFFF] text-slate-600 border-black hover:bg-rose-50 shadow-[1px_1px_0px_0px_#464C59]"
+                            ? "bg-rose-400 text-slate-950 border-[#1D366D] shadow-[2px_2px_0px_0px_rgba(29,54,109,1)]"
+                            : "bg-[#FFFFFF] text-slate-600 border-[#1D366D] hover:bg-rose-50 shadow-[1px_1px_0px_0px_rgba(29,54,109,1)]"
                         }`}
                       >
                         <div className="flex items-center gap-1.5 truncate">
-                          <span className="w-2 h-2 rounded-none bg-rose-500 border border-black shrink-0" />
+                          <span className="w-2 h-2 rounded-none bg-rose-500 border border-[#1D366D] shrink-0" />
                           <span className="font-sans truncate">FAILED</span>
                         </div>
                         <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded-none shrink-0 ml-2 ${
-                          lobbyFilter === "FAILED" ? "bg-slate-950 text-white font-black" : "bg-rose-100 text-rose-850 font-bold"
+                          lobbyFilter === "FAILED" ? "bg-[#1D366D] text-white font-black" : "bg-rose-100 text-rose-850 font-bold"
                         }`}>
                           {liveFailedCount}
                         </span>
@@ -1411,11 +1458,11 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
                     </div>
 
                     {/* QR Code Section */}
-                    <div className={`${showMobileQR ? "flex animate-in slide-in-from-top-2 duration-200" : "hidden"} md:flex mt-1 p-3 bg-white border-3 border-black rounded-none shadow-[3px_3px_0px_0px_#464C59] flex-col items-center justify-center text-center select-none gap-2 shrink-0`}>
+                    <div className={`${showMobileQR ? "flex animate-in slide-in-from-top-2 duration-200" : "hidden"} md:flex mt-1 p-3 bg-white border-3 border-[#1D366D] rounded-none shadow-[3px_3px_0px_0px_rgba(29,54,109,1)] flex-col items-center justify-center text-center select-none gap-2 shrink-0`}>
                       <span className="text-[10px] font-black text-slate-950 uppercase tracking-wider font-sans leading-none">
                         สแกนเข้าสอบ
                       </span>
-                      <div className="bg-slate-100 p-1.5 rounded-none border-3 border-black flex items-center justify-center w-full aspect-square max-w-[120px] mx-auto">
+                      <div className="bg-slate-100 p-1.5 rounded-none border-3 border-[#1D366D] flex items-center justify-center w-full aspect-square max-w-[120px] mx-auto">
                         <img
                           src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(window.location.origin + "?campaignId=" + campaign.id)}`}
                           alt="Campaign QR Code"
@@ -1434,7 +1481,7 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
                     </div>
 
                     {/* Focus Group Verification Status Card */}
-                    <div className="mt-1 p-3 bg-slate-950 border-3 border-black rounded-none shadow-[3px_3px_0px_0px_#464C59] flex flex-col gap-2 shrink-0 text-left">
+                    <div className="mt-1 p-3 bg-[#11224d] border-3 border-[#1D366D] rounded-none shadow-[3px_3px_0px_0px_rgba(29,54,109,1)] flex flex-col gap-2 shrink-0 text-left">
                       <div className="text-[9px] font-black uppercase tracking-wider font-sans text-[#2DC84D] flex items-center gap-1.5">
                         <ClipboardCheck size={12} className="shrink-0" />
                         <span>ตรงกับสมุดเช็คชื่อ (Focus Group)</span>
@@ -1472,11 +1519,11 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
                   </div>
 
                   {/* Right Column: Main Cards Board Container */}
-                  <div className={`flex-1 p-4 sm:p-6 border-3 border-black bg-slate-100/60 rounded-none shadow-[4px_4px_0px_0px_#464C59] overflow-y-auto ${isFullscreen ? "h-full" : "min-h-[280px] sm:min-h-[380px]"}`}>
+                  <div className={`flex-1 p-4 sm:p-6 border-3 border-[#1D366D] bg-slate-100/60 rounded-none shadow-[4px_4px_0px_0px_rgba(29,54,109,1)] overflow-y-auto ${isFullscreen ? "h-full" : "min-h-[280px] sm:min-h-[380px]"}`}>
                     {lobbyList.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-10 text-center space-y-4 min-h-full justify-center">
-                        <div className="w-12 h-12 rounded-none border-3 border-dashed border-black animate-spin flex items-center justify-center">
-                          <Tv size={20} className="text-black" />
+                        <div className="w-12 h-12 rounded-none border-3 border-dashed border-[#1D366D] animate-spin flex items-center justify-center">
+                          <Tv size={20} className="text-[#1D366D]" />
                         </div>
                         <div>
                           <p className="text-slate-950 font-black text-xs uppercase font-sans">กำลังรอพนักงานเชื่อมต่อเข้าห้องสอบ...</p>
@@ -1503,7 +1550,7 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
                             <button
                               type="button"
                               onClick={() => setLobbyFilter("all")}
-                              className="mt-4 px-3 py-1.5 bg-slate-950 hover:bg-slate-850 text-white text-[10px] font-black uppercase rounded-none border-3 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px] transition-all cursor-pointer font-sans"
+                              className="mt-4 px-3 py-1.5 bg-[#1D366D] hover:bg-indigo-900 text-white text-[10px] font-black uppercase rounded-none border-3 border-[#1D366D] shadow-[2px_2px_0px_0px_rgba(29,54,109,1)] active:translate-y-[1px] transition-all cursor-pointer font-sans"
                             >
                               แสดงรายชื่อทั้งหมด
                             </button>
@@ -1519,60 +1566,57 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
                             ? "medium" 
                             : "large";
 
+                      // Sizing specifications that keep the cards rounded and flexible but adjust the scale!
+                      let cardPadding = "p-4";
+                      let cardMinWidth = "min-w-[170px]";
+                      let cardMaxWidth = "max-w-[280px]";
+                      let idTextSize = "text-[11px]";
+                      let nameTextSize = "text-sm sm:text-base";
+                      let labelTextSize = "text-[11px]";
+                      let dotSize = "h-2 w-2";
+
+                      if (effectiveSize === "large") {
+                        cardPadding = "p-5";
+                        cardMinWidth = "min-w-[210px]";
+                        cardMaxWidth = "max-w-[340px]";
+                        idTextSize = "text-[12px]";
+                        nameTextSize = "text-base sm:text-lg";
+                        labelTextSize = "text-[12px]";
+                        dotSize = "h-2.5 w-2.5";
+                      } else if (effectiveSize === "small") {
+                        cardPadding = "p-2.5";
+                        cardMinWidth = "min-w-[130px]";
+                        cardMaxWidth = "max-w-[210px]";
+                        idTextSize = "text-[9.5px]";
+                        nameTextSize = "text-[11.5px] sm:text-[13px]";
+                        labelTextSize = "text-[9.5px]";
+                        dotSize = "h-1.5 w-1.5";
+                      }
+
                       const shouldCenterVertically = filteredLobbyList.length <= 16;
 
                       return (
                         <div className={`w-full min-h-full flex flex-col ${shouldCenterVertically ? "justify-center" : "justify-start"} items-center py-2`}>
                           <motion.div 
-                            className="flex flex-wrap-reverse justify-center items-center content-center animate-in fade-in duration-300 w-full"
-                            style={{
-                              gap: effectiveSize === "large" ? "12px" : effectiveSize === "medium" ? "10px" : "8px",
-                            }}
+                            className="flex flex-wrap justify-center items-stretch content-center gap-3 animate-in fade-in duration-300 w-full"
                           >
                             {filteredLobbyList.map((p, idx) => {
                               const isJoined = p.status === "JOINED";
                               const isPassed = p.status === "PASSED";
                               const isFailed = p.status === "FAILED";
 
-                              let cardBg = "bg-sky-450 text-slate-950";
+                              let cardBg = "bg-sky-50 border-sky-300";
+                              let dotColor = "bg-sky-500";
+                              
                               if (isJoined) {
-                                cardBg = "bg-sky-300 text-black";
-                              }
-                              let statusText = "กำลังสอบ...";
-                              let scoreDisplay = "";
-
-                              if (isPassed) {
-                                cardBg = "bg-[#2DC84D] text-black";
-                                statusText = "ผ่าน";
-                                scoreDisplay = `${p.score.toFixed(0)}%`;
+                                cardBg = "bg-[#E0F2FE] border-sky-450";
+                                dotColor = "bg-sky-500";
+                              } else if (isPassed) {
+                                cardBg = "bg-[#DCFCE7] border-[#2DC84D]";
+                                dotColor = "bg-[#2DC84D]";
                               } else if (isFailed) {
-                                cardBg = "bg-rose-400 text-slate-950";
-                                statusText = "ไม่ผ่าน";
-                                scoreDisplay = `${p.score.toFixed(0)}%`;
-                              }
-
-                              // Sizing specs
-                              let cardHeight = "h-24 sm:h-28 p-3 sm:p-4";
-                              let cardWidth = "w-[140px]";
-                              let idTextSize = "text-[10px] sm:text-[11px]";
-                              let nameTextSize = "text-xs sm:text-sm mt-0.5 sm:mt-1";
-                              let statusTextSize = "text-[7.5px] sm:text-[8px] px-1.5 py-0.5";
-                              let scoreTextSize = "text-sm sm:text-md";
-
-                              if (effectiveSize === "medium") {
-                                cardHeight = "h-22 sm:h-24 p-2.5 sm:p-3";
-                                cardWidth = "w-[110px]";
-                                idTextSize = "text-[9px] sm:text-[10px]";
-                                nameTextSize = "text-[11px] sm:text-xs mt-0.5 leading-tight";
-                                statusTextSize = "text-[7px] sm:text-[7.5px] px-1 py-0.5";
-                                scoreTextSize = "text-xs sm:text-sm";
-                              } else if (effectiveSize === "small") {
-                                cardHeight = "h-18 sm:h-20 p-2";
-                                cardWidth = "w-[85px]";
-                                idTextSize = "text-[8px] sm:text-[9px]";
-                                nameTextSize = "text-[10px] sm:text-[11px] mt-0.5 leading-none";
-                                statusTextSize = "text-[6.5px] sm:text-[7px] px-1 py-0.2";
-                                scoreTextSize = "text-[11px] sm:text-xs font-bold";
+                                cardBg = "bg-[#FEE2E2] border-rose-400";
+                                dotColor = "bg-rose-500";
                               }
 
                               return (
@@ -1581,47 +1625,50 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
                                   layout
                                   initial={{ scale: 0.8, opacity: 0 }}
                                   animate={{ scale: 1, opacity: 1 }}
-                                  className={`border-3 border-black rounded-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between relative overflow-hidden transition-colors duration-300 ${cardHeight} ${cardWidth} ${cardBg} shrink-0`}
+                                  className={`border-2 border-[#1D366D] rounded-2xl shadow-[3px_3px_0px_0px_rgba(29,54,109,1)] flex flex-col justify-between relative overflow-hidden transition-all duration-300 ${cardPadding} w-auto ${cardMinWidth} ${cardMaxWidth} h-auto ${cardBg} shrink-0`}
                                 >
-                                {isJoined && (
-                                  <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
-                                )}
+                                  {isJoined && (
+                                    <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px] opacity-25 pointer-events-none" />
+                                  )}
 
-                                <div>
-                                  <div className="flex items-start justify-between gap-1">
-                                    <span className={`font-black uppercase tracking-wider block font-mono truncate ${idTextSize}`}>
-                                      {p.userIdentifier}
-                                    </span>
-                                    {isJoined && (
-                                      <span className="flex h-1.5 w-1.5 relative shrink-0 mt-0.5">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-900 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-slate-950"></span>
+                                  <div className="flex flex-col gap-1.5 z-10 w-full text-left">
+                                    {/* รหัสพนักงาน & Status Pulse */}
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className={`font-black uppercase tracking-wider font-mono text-slate-700 truncate ${idTextSize}`}>
+                                        {p.userIdentifier}
                                       </span>
-                                    )}
-                                  </div>
-                                  <h4 className={`font-black line-clamp-1 leading-tight ${nameTextSize}`}>{p.userName}</h4>
-                                  {effectiveSize !== "small" && (
-                                    <p className="text-[8px] sm:text-[9px] font-bold opacity-80 line-clamp-1">{p.department || "-"}</p>
-                                  )}
-                                </div>
+                                      <span className={`flex ${dotSize} relative shrink-0`}>
+                                        {isJoined && (
+                                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                                        )}
+                                        <span className={`relative inline-flex rounded-full h-full w-full ${dotColor}`}></span>
+                                      </span>
+                                    </div>
 
-                                <div className="flex items-end justify-between gap-1 z-10">
-                                  <span className={`font-black uppercase tracking-widest block font-mono bg-black/10 rounded-none ${statusTextSize}`}>
-                                    {statusText}
-                                  </span>
-                                  {scoreDisplay && (
-                                    <span className={`font-black font-mono leading-none tracking-tighter shrink-0 ${scoreTextSize}`}>
-                                      {scoreDisplay}
-                                    </span>
-                                  )}
-                                </div>
-                              </motion.div>
-                            );
-                          })}
-                        </motion.div>
-                      </div>
-                    );
-                  })()}
+                                    {/* ชื่อ */}
+                                    <h4 className={`font-black text-slate-950 leading-snug tracking-tight ${nameTextSize}`}>
+                                      {p.userName}
+                                    </h4>
+
+                                    {/* บริษัท */}
+                                    <div className={`${labelTextSize} font-bold text-slate-800 tracking-tight mt-0.5 truncate`}>
+                                      <span className="text-slate-500 font-normal mr-1">บริษัท:</span>
+                                      {p.company || "Aapico Plastics"}
+                                    </div>
+
+                                    {/* แผนก */}
+                                    <div className={`${labelTextSize} font-bold text-slate-800 tracking-tight truncate`}>
+                                      <span className="text-slate-500 font-normal mr-1">แผนก:</span>
+                                      {p.department || "ไม่ระบุแผนก"}
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              );
+                            })}
+                          </motion.div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
 

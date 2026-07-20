@@ -5,6 +5,7 @@ import QuestionBank from "./components/QuestionBank";
 import AAPICOSmartEvalLogo from "./components/AAPICOSmartEvalLogo";
 import BrandingGuidelines from "./components/BrandingGuidelines";
 import AdminRolesManager from "./components/AdminRolesManager";
+import WebGuidedTour from "./components/WebGuidedTour";
 import { 
   ShieldCheck, 
   ArrowRight, 
@@ -23,7 +24,8 @@ import {
   LogIn,
   LogOut,
   Database,
-  Users
+  Users,
+  Tv
 } from "lucide-react";
 import { CustomAlertOptions } from "./types";
 import { showSuccess, showError, showWarning } from "./lib/swal";
@@ -68,11 +70,11 @@ try {
 }
 
 export default function App() {
-  // Read query parameters
+  // Read query parameters & set on load
   const [urlCampaignId, setUrlCampaignId] = useState<string | null>(() => {
     try {
       const params = new URLSearchParams(window.location.search);
-      return params.get("campaignId")?.trim().toLowerCase() || null;
+      return params.get("campaignId") || null;
     } catch (_) {
       return null;
     }
@@ -80,6 +82,17 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<"student" | "admin">("student");
   const [adminMenu, setAdminMenu] = useState<"bank" | "campaigns" | "branding" | "roles">("bank");
   const [inputCampaignId, setInputCampaignId] = useState("");
+  const [startTour, setStartTour] = useState(false);
+
+  // Dynamic font size adjustment state - Defaulting to 1.30 (130%) permanently as requested
+  const [fontScale] = useState<number>(1.30);
+
+  // Apply font scale dynamically to document element
+  useEffect(() => {
+    try {
+      document.documentElement.style.fontSize = `${fontScale * 100}%`;
+    } catch (_) {}
+  }, [fontScale]);
 
   // System Admin & Teacher authentication states
   const [adminUser, setAdminUser] = useState<{ name: string; department: string; emNo: string } | null>(() => {
@@ -308,7 +321,7 @@ export default function App() {
             </div>
             <button
               onClick={handleQuitExam}
-              className="text-xs font-black text-slate-950 uppercase tracking-wider transition-all cursor-pointer border-3 border-black px-4 py-2 rounded-none bg-white hover:bg-slate-50 shadow-[3px_3px_0px_0px_#464C59] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+              className="w-full sm:w-auto text-center text-xs font-black text-slate-950 uppercase tracking-wider transition-all cursor-pointer border-3 border-black px-4 py-2 rounded-none bg-white hover:bg-slate-50 shadow-[3px_3px_0px_0px_#464C59] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
             >
               ออกจากการสอบ / กลับหน้าหลัก
             </button>
@@ -334,28 +347,28 @@ export default function App() {
               <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Digital Evaluation & Testing Platform</p>
             </div>
           </div>
-          <div className="flex gap-4 mt-4 md:mt-0">
+          <div className="flex flex-row gap-2 sm:gap-4 mt-4 md:mt-0 w-full md:w-auto justify-center md:justify-end">
             <button 
               onClick={() => setActiveTab("student")}
-              className={`px-4 py-2 neo-border-2 flex items-center gap-2 text-sm font-semibold transition-colors cursor-pointer ${
+              className={`px-3 sm:px-4 py-2 neo-border-2 flex-1 sm:flex-none flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
                 activeTab === "student"
                   ? "bg-brand-accent-blue text-white shadow-[2px_2px_0px_0px_#000]"
                   : "bg-white text-slate-700 hover:bg-slate-100"
               }`}
             >
-              <BookOpen className="w-4 h-4" />
-              สำหรับผู้สอบ
+              <BookOpen className="w-4 h-4 shrink-0" />
+              <span>สำหรับผู้สอบ</span>
             </button>
             <button 
               onClick={() => setActiveTab("admin")}
-              className={`px-4 py-2 neo-border-2 flex items-center gap-2 text-sm font-semibold transition-colors cursor-pointer ${
+              className={`px-3 sm:px-4 py-2 neo-border-2 flex-1 sm:flex-none flex items-center justify-center gap-2 text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
                 activeTab === "admin"
                   ? "bg-brand-accent-blue text-white shadow-[2px_2px_0px_0px_#000]"
                   : "bg-white text-slate-700 hover:bg-slate-100"
               }`}
             >
-              <ShieldCheck className="w-4 h-4" />
-              ผู้ดูแลระบบ / อาจารย์
+              <ShieldCheck className="w-4 h-4 shrink-0" />
+              <span>ผู้ดูแลระบบ / อาจารย์</span>
             </button>
           </div>
         </div>
@@ -364,61 +377,67 @@ export default function App() {
 
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 flex-1 flex flex-col justify-between">
         {/* Main Workspace */}
-        <main className="flex-1 w-full py-8 flex flex-col justify-center">
+        <main className="flex-1 w-full py-10 sm:py-16 flex flex-col justify-center">
         {activeTab === "student" ? (
-          <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center py-6 w-full">
+          <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-stretch py-4 w-full">
             {/* Left promo graphics column */}
-            <div className="lg:col-span-7 space-y-6 text-center lg:text-left pr-0 lg:pr-6">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 border-2 border-black rounded-none text-[10px] font-black text-aapico-blue uppercase tracking-widest font-mono">
+            <div className="lg:col-span-7 space-y-8 flex flex-col justify-center text-center lg:text-left pr-0 lg:pr-8">
+              <div className="inline-flex self-center lg:self-start items-center gap-1.5 px-3 py-1 bg-indigo-50 border-2 border-black rounded-none text-[10px] font-black text-aapico-blue uppercase tracking-widest font-mono">
                 SECURE ANTI-FRAUD ENGINE ACTIVE
               </div>
-              <h1 className="text-3xl sm:text-5xl font-black text-slate-950 tracking-tighter leading-none font-sans uppercase">
-                ระบบจัดสอบความรู้ <br />
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-950 tracking-tighter leading-tight font-sans uppercase">
+                ระบบจัดสอบความรู้ <br className="hidden sm:inline" />
                 <span className="text-aapico-blue">และวิเคราะห์สถิติแม่นยำ</span>
               </h1>
-              <p className="text-sm text-slate-500 max-w-lg leading-relaxed mx-auto lg:mx-0 font-medium">
+              <p className="text-base sm:text-lg text-slate-600 leading-relaxed mx-auto lg:mx-0 font-medium max-w-xl">
                 ยินดีต้อนรับเข้าสู่ระบบจัดการและประเมินผลทักษะความรู้ดิจิทัล มั่นคงสูงด้วยระบบคลังคำถามและชุดสอบแยกฐานข้อมูลตามกลุ่ม มั่นใจด้วยการสลับสับสุ่มข้อสอบ ป้องกันทุจริตแบบทันที
               </p>
 
               {/* USP Row - Bento boxes - strictly 90-degree angles and hard shadows */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                <div className="p-5 bg-white border-2 border-black rounded-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] space-y-2 text-left">
-                  <div className="p-2 bg-slate-100 border border-black rounded-none w-9 h-9 flex items-center justify-center">
-                    <Clock size={16} className="text-aapico-blue" />
+                <div className="p-5 bg-white border-2 border-black rounded-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] space-y-2 text-left flex flex-col justify-between">
+                  <div>
+                    <div className="p-2 bg-slate-100 border border-black rounded-none w-9 h-9 flex items-center justify-center mb-3">
+                      <Clock size={16} className="text-aapico-blue" />
+                    </div>
+                    <p className="text-xs font-black text-slate-950 uppercase tracking-tight">ระบบจับเวลา</p>
                   </div>
-                  <p className="text-xs font-black text-slate-950 uppercase tracking-tight">ระบบจับเวลา</p>
-                  <p className="text-[10px] text-slate-500 leading-normal font-medium">ส่งผลการทดสอบทันทีที่สิ้นสุดเวลาเพื่อความเที่ยงตรง</p>
+                  <p className="text-[10px] sm:text-xs text-slate-500 leading-normal font-medium mt-1">ส่งผลการทดสอบทันทีที่สิ้นสุดเวลาเพื่อความเที่ยงตรง</p>
                 </div>
-                <div className="p-5 bg-white border-2 border-black rounded-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] space-y-2 text-left">
-                  <div className="p-2 bg-slate-100 border border-black rounded-none w-9 h-9 flex items-center justify-center">
-                    <AAPICOSmartEvalLogo size={20} />
+                <div className="p-5 bg-white border-2 border-black rounded-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] space-y-2 text-left flex flex-col justify-between">
+                  <div>
+                    <div className="p-2 bg-slate-100 border border-black rounded-none w-9 h-9 flex items-center justify-center mb-3">
+                      <AAPICOSmartEvalLogo size={20} />
+                    </div>
+                    <p className="text-xs font-black text-slate-950 uppercase tracking-tight">สุ่มสลับโจทย์</p>
                   </div>
-                  <p className="text-xs font-black text-slate-950 uppercase tracking-tight">สุ่มสลับโจทย์</p>
-                  <p className="text-[10px] text-slate-500 leading-normal font-medium">สลับสับเปลี่ยนข้อสอบและตัวเลือกสำหรับผู้ทำสอบแต่ละคน</p>
+                  <p className="text-[10px] sm:text-xs text-slate-500 leading-normal font-medium mt-1">สลับสับเปลี่ยนข้อสอบและตัวเลือกสำหรับผู้ทำสอบแต่ละคน</p>
                 </div>
-                <div className="p-5 bg-white border-2 border-black rounded-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] space-y-2 text-left">
-                  <div className="p-2 bg-slate-100 border border-black rounded-none w-9 h-9 flex items-center justify-center">
-                    <BarChart3 size={16} className="text-aapico-blue" />
+                <div className="p-5 bg-white border-2 border-black rounded-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] space-y-2 text-left flex flex-col justify-between">
+                  <div>
+                    <div className="p-2 bg-slate-100 border border-black rounded-none w-9 h-9 flex items-center justify-center mb-3">
+                      <BarChart3 size={16} className="text-aapico-blue" />
+                    </div>
+                    <p className="text-xs font-black text-slate-950 uppercase tracking-tight">วิเคราะห์เรียลไทม์</p>
                   </div>
-                  <p className="text-xs font-black text-slate-950 uppercase tracking-tight">วิเคราะห์เรียลไทม์</p>
-                  <p className="text-[10px] text-slate-500 leading-normal font-medium">วิเคราะห์สถิติคะแนน ความยากข้อสอบ และอัตราผ่านอย่างละเอียด</p>
+                  <p className="text-[10px] sm:text-xs text-slate-500 leading-normal font-medium mt-1">วิเคราะห์สถิติคะแนน ความยากข้อสอบ และอัตราผ่านอย่างละเอียด</p>
                 </div>
               </div>
             </div>
 
             {/* Right student Join input column */}
-            <div className="lg:col-span-5 bg-white border-3 border-black rounded-none p-6 sm:p-8 shadow-[5px_5px_0px_0px_#464C59]">
+            <div id="tour-join-campaign-section" className="lg:col-span-5 bg-white border-3 border-black rounded-none p-6 sm:p-10 shadow-[5px_5px_0px_0px_#464C59] flex flex-col justify-center">
               <div className="text-center mb-6">
                 <div className="inline-flex items-center justify-center p-3.5 bg-slate-100 text-aapico-blue rounded-none mb-3 border-3 border-black shadow-[3px_3px_0px_0px_#464C59]">
                   <BookOpen size={24} />
                 </div>
-                <h2 className="text-xl font-bold text-slate-900 font-sans tracking-tight uppercase">เข้าสู่ห้องสอบ E-Exam</h2>
-                <p className="text-xs text-slate-500 font-medium mt-1">กรอกรหัสห้องสอบควิซที่ได้รับจากอาจารย์ผู้คุมสอบเพื่อเข้าห้องสอบ</p>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-sans tracking-tight uppercase">เข้าสู่ห้องสอบ E-Exam</h2>
+                <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">กรอกรหัสห้องสอบควิซที่ได้รับจากอาจารย์ผู้คุมสอบเพื่อเข้าห้องสอบ</p>
               </div>
 
               <form onSubmit={handleJoinExam} className="space-y-5">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 tracking-wide mb-1.5 font-sans">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-600 tracking-wide mb-1.5 font-sans">
                     รหัสห้องสอบควิซ (Exam Room ID / Campaign ID)
                   </label>
                   <input
@@ -427,92 +446,97 @@ export default function App() {
                     placeholder="เช่น midterm-math-m1"
                     value={inputCampaignId}
                     onChange={(e) => setInputCampaignId(e.target.value)}
-                    className="w-full px-4 py-3 border-3 border-black rounded-none text-xs font-normal font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-aapico-blue focus:border-aapico-blue"
+                    className="w-full px-4 py-3 border-3 border-black rounded-none text-xs sm:text-sm font-normal font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-aapico-blue focus:border-aapico-blue"
                   />
-                  <span className="text-[10px] text-slate-400 block mt-2 leading-normal">
+                  <span className="text-[10px] sm:text-xs text-slate-400 block mt-2 leading-normal">
                     * รหัสนี้จะได้รับเป็นลิงก์เฉพาะ หรือสแกน QR Code จากอาจารย์ผู้คุมสอบเพื่อทำสอบในกลุ่มฐานข้อมูลแยกเฉพาะ
                   </span>
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full inline-flex items-center justify-center gap-1.5 py-3.5 bg-aapico-green hover:bg-emerald-400 text-black rounded-none text-xs font-semibold uppercase tracking-wider border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer"
+                  className="w-full inline-flex items-center justify-center gap-1.5 py-3.5 bg-aapico-green hover:bg-emerald-400 text-black rounded-none text-xs sm:text-sm font-semibold uppercase tracking-wider border-3 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer"
                 >
                   เข้าสู่ระบบเพื่อทำข้อสอบ
                   <ArrowRight size={14} />
                 </button>
 
                 <div className="border-t-3 border-black pt-5 mt-4 text-center">
-                  <p className="text-xs text-slate-500 font-medium mb-2 font-sans tracking-wide">หรือทดลองจำลองครบ Loop ของระบบทันที:</p>
+                  <p className="text-xs sm:text-sm text-slate-500 font-medium mb-2 font-sans tracking-wide">หรือเริ่มทัวร์แนะนำขั้นตอนการทำข้อสอบครบวงจร:</p>
                   <button
                     type="button"
                     onClick={() => {
-                      setInputCampaignId("demo-quiz");
-                      window.history.pushState({}, "", "?campaignId=demo-quiz");
-                      setUrlCampaignId("demo-quiz");
+                      setStartTour(true);
                     }}
-                    className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 bg-aapico-blue hover:bg-indigo-900 text-white rounded-none text-[11px] font-semibold uppercase tracking-wider border-3 border-black shadow-[3px_3px_0px_0px_#464C59] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all cursor-pointer"
+                    className="w-full inline-flex items-center justify-center gap-2 py-3 bg-[#1D366D] hover:bg-indigo-900 text-white rounded-none text-xs font-black uppercase tracking-wider border-3 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all cursor-pointer"
                   >
-                    เข้าสู่ห้องสอบสาธิต (Demo Exam Room ID: demo-quiz)
+                    <Tv size={14} className="shrink-0 text-emerald-400" />
+                    <span>เริ่มต้นทัวร์แนะนำการใช้งาน (Web Guided Tour)</span>
                   </button>
                 </div>
               </form>
             </div>
           </div>
         ) : !adminUser ? (
-          <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center py-6 w-full animate-in fade-in duration-350">
+          <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-stretch py-4 w-full animate-in fade-in duration-350">
             {/* Left promo graphics column */}
-            <div className="lg:col-span-7 space-y-6 text-center lg:text-left pr-0 lg:pr-6">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#eef2f6] border-2 border-black rounded-none text-[10px] font-semibold text-aapico-blue uppercase tracking-widest font-mono">
+            <div className="lg:col-span-7 space-y-8 flex flex-col justify-center text-center lg:text-left pr-0 lg:pr-8">
+              <div className="inline-flex self-center lg:self-start items-center gap-1.5 px-3 py-1 bg-[#eef2f6] border-2 border-black rounded-none text-[10px] font-semibold text-aapico-blue uppercase tracking-widest font-mono">
                 SECURE ADMIN PANEL AUTHORIZATION
               </div>
-              <h1 className="text-3xl sm:text-5xl font-black text-slate-950 tracking-tighter leading-none font-sans uppercase text-left">
-                ระบบจัดการทดสอบ <br />
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-950 tracking-tighter leading-tight font-sans uppercase">
+                ระบบจัดการทดสอบ <br className="hidden sm:inline" />
                 <span className="text-aapico-blue">และประเมินผลความรู้ระดับองค์กร</span>
               </h1>
-              <p className="text-sm text-slate-500 max-w-lg leading-relaxed mx-auto lg:mx-0 font-medium text-left">
+              <p className="text-base sm:text-lg text-slate-600 leading-relaxed mx-auto lg:mx-0 font-medium max-w-xl">
                 ยินดีต้อนรับอาจารย์และเจ้าหน้าที่ผู้ประเมิน เข้าสู่ศูนย์กลางบริหารคลังข้อสอบและวิเคราะห์ผลการทดสอบดิจิทัล ปลอดภัย รวดเร็ว และประเมินผลได้ทันที
               </p>
 
               {/* USP Row - Bento boxes - strictly 90-degree angles and hard shadows */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                <div className="p-5 bg-white border-2 border-black rounded-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] space-y-2 text-left">
-                  <div className="p-2 bg-slate-100 border border-black rounded-none w-9 h-9 flex items-center justify-center">
-                    <Database size={16} className="text-aapico-blue" />
+                <div className="p-5 bg-white border-2 border-black rounded-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] space-y-2 text-left flex flex-col justify-between">
+                  <div>
+                    <div className="p-2 bg-slate-100 border border-black rounded-none w-9 h-9 flex items-center justify-center mb-3">
+                      <Database size={16} className="text-aapico-blue" />
+                    </div>
+                    <p className="text-xs font-semibold text-slate-900 uppercase tracking-tight">ระบบคลังข้อสอบ</p>
                   </div>
-                  <p className="text-xs font-semibold text-slate-900 uppercase tracking-tight">ระบบคลังข้อสอบ</p>
-                  <p className="text-[10px] text-slate-500 leading-normal font-medium">สร้าง จัดการ และจัดหมวดหมู่คลังคำถามได้ไม่จำกัดจำนวน</p>
+                  <p className="text-[10px] sm:text-xs text-slate-500 leading-normal font-medium mt-1">สร้าง จัดการ และจัดหมวดหมู่คลังคำถามได้ไม่จำกัดจำนวน</p>
                 </div>
-                <div className="p-5 bg-white border-2 border-black rounded-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] space-y-2 text-left">
-                  <div className="p-2 bg-slate-100 border border-black rounded-none w-9 h-9 flex items-center justify-center">
-                    <Users size={16} className="text-aapico-blue" />
+                <div className="p-5 bg-white border-2 border-black rounded-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] space-y-2 text-left flex flex-col justify-between">
+                  <div>
+                    <div className="p-2 bg-slate-100 border border-black rounded-none w-9 h-9 flex items-center justify-center mb-3">
+                      <Users size={16} className="text-aapico-blue" />
+                    </div>
+                    <p className="text-xs font-semibold text-slate-900 uppercase tracking-tight">จัดการห้องสอบ</p>
                   </div>
-                  <p className="text-xs font-semibold text-slate-900 uppercase tracking-tight">จัดการห้องสอบ</p>
-                  <p className="text-[10px] text-slate-500 leading-normal font-medium">คุมสอบ ติดตามความคืบหน้า และประมวลผลคะแนนอัตโนมัติ</p>
+                  <p className="text-[10px] sm:text-xs text-slate-500 leading-normal font-medium mt-1">คุมสอบ ติดตามความคืบหน้า และประมวลผลคะแนนอัตโนมัติ</p>
                 </div>
-                <div className="p-5 bg-white border-2 border-black rounded-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] space-y-2 text-left">
-                  <div className="p-2 bg-slate-100 border border-black rounded-none w-9 h-9 flex items-center justify-center">
-                    <ShieldCheck size={16} className="text-aapico-blue" />
+                <div className="p-5 bg-white border-2 border-black rounded-none shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] space-y-2 text-left flex flex-col justify-between">
+                  <div>
+                    <div className="p-2 bg-slate-100 border border-black rounded-none w-9 h-9 flex items-center justify-center mb-3">
+                      <ShieldCheck size={16} className="text-aapico-blue" />
+                    </div>
+                    <p className="text-xs font-semibold text-slate-900 uppercase tracking-tight">ความปลอดภัยสูง</p>
                   </div>
-                  <p className="text-xs font-semibold text-slate-900 uppercase tracking-tight">ความปลอดภัยสูง</p>
-                  <p className="text-[10px] text-slate-500 leading-normal font-medium">ควบคุมการสลับข้อสอบ และระบบยืนยันตัวตนระดับองค์กร</p>
+                  <p className="text-[10px] sm:text-xs text-slate-500 leading-normal font-medium mt-1">ควบคุมการสลับข้อสอบ และระบบยืนยันตัวตนระดับองค์กร</p>
                 </div>
               </div>
             </div>
 
             {/* Right admin input column */}
-            <div className="lg:col-span-5 bg-white border-3 border-black rounded-none p-6 sm:p-8 shadow-[5px_5px_0px_0px_#464C59] w-full">
+            <div className="lg:col-span-5 bg-white border-3 border-black rounded-none p-6 sm:p-10 shadow-[5px_5px_0px_0px_#464C59] w-full flex flex-col justify-center">
               <div className="text-center mb-6">
                 <div className="inline-flex items-center justify-center p-3.5 bg-aapico-blue text-white rounded-none mb-3 border-3 border-black shadow-[3px_3px_0px_0px_#464C59]">
                   <ShieldCheck size={24} />
                 </div>
-                <h2 className="text-xl font-bold text-slate-900 font-sans tracking-tight uppercase text-center">ลงชื่อเข้าสู่ระบบผู้ดูแล / อาจารย์</h2>
-                <p className="text-xs text-slate-500 font-medium mt-1 text-center">ยืนยันตัวตนผ่านระบบตรวจสอบประวัติการทำงาน ESS (Employee Self-Service)</p>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-sans tracking-tight uppercase text-center">ลงชื่อเข้าสู่ระบบผู้ดูแล / อาจารย์</h2>
+                <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1 text-center">ยืนยันตัวตนผ่านระบบตรวจสอบประวัติการทำงาน ESS (Employee Self-Service)</p>
               </div>
 
               <form onSubmit={handleAdminLogin} className="space-y-5 text-left">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 tracking-wide mb-1.5 font-sans">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-600 tracking-wide mb-1.5 font-sans">
                     รหัสพนักงาน (EM ID / Username)
                   </label>
                   <div className="relative">
@@ -525,13 +549,13 @@ export default function App() {
                       placeholder="เช่น AH10002898"
                       value={adminId}
                       onChange={(e) => setAdminId(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2.5 border-3 border-black rounded-none text-xs font-normal font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-aapico-blue"
+                      className="w-full pl-9 pr-4 py-2.5 border-3 border-black rounded-none text-xs sm:text-sm font-normal font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-aapico-blue"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 tracking-wide mb-1.5 font-sans">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-600 tracking-wide mb-1.5 font-sans">
                     รหัสผ่าน (Password)
                   </label>
                   <div className="relative">
@@ -544,7 +568,7 @@ export default function App() {
                       placeholder="รหัสผ่านเข้าสู่ระบบ"
                       value={adminPassword}
                       onChange={(e) => setAdminPassword(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2.5 border-3 border-black rounded-none text-xs font-normal font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-aapico-blue"
+                      className="w-full pl-9 pr-4 py-2.5 border-3 border-black rounded-none text-xs sm:text-sm font-normal font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-aapico-blue"
                     />
                   </div>
                 </div>
@@ -552,7 +576,7 @@ export default function App() {
                 <button
                   type="submit"
                   disabled={adminLoginLoading}
-                  className="w-full inline-flex items-center justify-center gap-1.5 py-3.5 bg-aapico-blue text-white hover:bg-[#132448] disabled:bg-slate-200 disabled:text-slate-400 rounded-none text-xs font-semibold uppercase tracking-wider border-3 border-black shadow-[4px_4px_0px_0px_#464C59] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer font-sans"
+                  className="w-full inline-flex items-center justify-center gap-1.5 py-3.5 bg-aapico-blue text-white hover:bg-[#132448] disabled:bg-slate-200 disabled:text-slate-400 rounded-none text-xs sm:text-sm font-semibold uppercase tracking-wider border-3 border-black shadow-[4px_4px_0px_0px_#464C59] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all cursor-pointer font-sans"
                 >
                   {adminLoginLoading ? (
                     <span>กำลังตรวจสอบ...</span>
@@ -572,13 +596,13 @@ export default function App() {
             <section className="relative" data-purpose="status-bar">
               <div className="text-white neo-border-3 neo-shadow-black p-5 flex flex-col md:flex-row items-center justify-between gap-6 bg-brand-accent-blue">
                 {/* Identity & Status Info */}
-                <div className="flex items-center gap-6">
+                <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-center sm:text-left w-full sm:w-auto">
                   {/* Status Icon with Neo-Brutalism style wrapper */}
-                  <div className="bg-neo-green p-3 neo-border-2 border-white">
+                  <div className="bg-neo-green p-3 neo-border-2 border-white shrink-0">
                     <ShieldCheck className="w-8 h-8 text-black" />
                   </div>
-                  <div className="space-y-1 text-left">
-                    <div className="flex items-center gap-2">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-center sm:justify-start gap-2">
                       <span className="text-neo-green font-bold text-sm tracking-widest uppercase">Authorized Access</span>
                       <div className="h-1 w-8 bg-neo-green"></div>
                     </div>
@@ -589,10 +613,10 @@ export default function App() {
                   </div>
                 </div>
                 {/* Action Area */}
-                <div className="flex items-center">
+                <div className="flex items-center w-full sm:w-auto justify-center">
                   <button 
                     onClick={handleAdminLogout}
-                    className="bg-neo-red text-white font-bold py-3 px-8 neo-border-2 border-white neo-shadow-black neo-button-hover neo-button-active flex items-center gap-3 group transition-all cursor-pointer"
+                    className="w-full sm:w-auto bg-neo-red text-white font-bold py-3 px-8 neo-border-2 border-white neo-shadow-black neo-button-hover neo-button-active flex items-center justify-center gap-3 group transition-all cursor-pointer"
                   >
                     <span className="text-lg">ลงชื่อออก</span>
                     <LogOut className="w-6 h-6 transform group-hover:translate-x-1 transition-transform" />
@@ -603,10 +627,10 @@ export default function App() {
             {/* END: RedesignedStatusNotification */}
 
             {/* BEGIN: MainContentTabs */}
-            <nav className="flex flex-wrap gap-0" data-purpose="tab-navigation">
+            <nav className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3" data-purpose="tab-navigation">
               <button 
                 onClick={() => setAdminMenu("bank")}
-                className={`px-6 py-4 neo-border-2 border-r-0 font-bold text-sm hover:bg-gray-100 uppercase tracking-tighter cursor-pointer transition-all ${
+                className={`px-4 sm:px-6 py-3 sm:py-4 neo-border-2 font-bold text-xs sm:text-sm hover:bg-gray-100 uppercase tracking-tighter cursor-pointer transition-all flex-1 sm:flex-initial text-center justify-center ${
                   adminMenu === "bank"
                     ? "bg-brand-accent-blue text-white shadow-[4px_4px_0px_0px_#000]"
                     : "bg-white text-slate-800"
@@ -616,7 +640,7 @@ export default function App() {
               </button>
               <button 
                 onClick={() => setAdminMenu("campaigns")}
-                className={`px-6 py-4 neo-border-2 border-r-0 font-bold text-sm hover:bg-gray-100 uppercase tracking-tighter cursor-pointer transition-all ${
+                className={`px-4 sm:px-6 py-3 sm:py-4 neo-border-2 font-bold text-xs sm:text-sm hover:bg-gray-100 uppercase tracking-tighter cursor-pointer transition-all flex-1 sm:flex-initial text-center justify-center ${
                   adminMenu === "campaigns"
                     ? "bg-brand-accent-blue text-white shadow-[4px_4px_0px_0px_#000]"
                     : "bg-white text-slate-800"
@@ -626,24 +650,24 @@ export default function App() {
               </button>
               <button 
                 onClick={() => setAdminMenu("branding")}
-                className={`px-6 py-4 neo-border-2 border-r-0 font-bold text-sm hover:bg-gray-100 flex items-center gap-2 uppercase tracking-tighter cursor-pointer transition-all ${
+                className={`px-4 sm:px-6 py-3 sm:py-4 neo-border-2 font-bold text-xs sm:text-sm hover:bg-gray-100 flex items-center gap-2 uppercase tracking-tighter cursor-pointer transition-all flex-1 sm:flex-initial justify-center ${
                   adminMenu === "branding"
                     ? "bg-brand-accent-blue text-white shadow-[4px_4px_0px_0px_#000]"
                     : "bg-white text-slate-800"
                 }`}
               >
-                <Palette className="w-4 h-4" />
+                <Palette className="w-4 h-4 shrink-0" />
                 คู่มือแบรนด์ (CI BOOK)
               </button>
               <button 
                 onClick={() => setAdminMenu("roles")}
-                className={`px-6 py-4 neo-border-2 font-bold text-sm hover:bg-gray-100 flex items-center gap-2 uppercase tracking-tighter cursor-pointer transition-all ${
+                className={`px-4 sm:px-6 py-3 sm:py-4 neo-border-2 font-bold text-xs sm:text-sm hover:bg-gray-100 flex items-center gap-2 uppercase tracking-tighter cursor-pointer transition-all flex-1 sm:flex-initial justify-center ${
                   adminMenu === "roles"
                     ? "bg-brand-accent-blue text-white shadow-[4px_4px_0px_0px_#000]"
                     : "bg-white text-slate-800"
                 }`}
               >
-                <ShieldCheck className="w-4 h-4" />
+                <ShieldCheck className="w-4 h-4 shrink-0" />
                 จัดการสิทธิ์ (ADMIN ROLES)
               </button>
             </nav>
@@ -821,6 +845,15 @@ export default function App() {
           </div>
         </div>
       )}
+      
+      <WebGuidedTour 
+        isOpen={startTour} 
+        onClose={() => setStartTour(false)} 
+        setUrlCampaignId={setUrlCampaignId}
+        setActiveTab={setActiveTab}
+        setAdminMenu={setAdminMenu}
+        setAdminUser={setAdminUser}
+      />
       </div>
     </div>
   );

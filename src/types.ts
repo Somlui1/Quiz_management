@@ -40,6 +40,7 @@ export interface Campaign {
   ruleDifficulty?: string;
   ruleCount?: number;
   targetBooklet?: string;
+  activeTakersCount?: number;
 }
 
 export interface Submission {

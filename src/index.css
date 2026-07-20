@@ -143,5 +143,46 @@ button:active {
   border-radius: 16px;
 }
 
+/* ==========================================================================
+   AAPICO SmartEval: Tour & Sizing Button Custom Overrides
+   ========================================================================== */
+
+/* Size selector buttons bypass for global button overrides */
+button.lobby-sz-btn {
+  border-radius: 4px !important;
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Driver.js Custom Popover Premium Styling Override */
+.driver-popover.aapico-tour-popover {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 16px !important;
+  padding: 18px !important;
+  box-shadow: 0 10px 30px -5px rgba(29, 54, 109, 0.15), 0 8px 16px -6px rgba(29, 54, 109, 0.1) !important;
+  max-width: 360px !important;
+}
+
+.driver-popover.aapico-tour-popover .driver-popover-arrow {
+  border-color: #ffffff !important;
+}
+
+.driver-popover.aapico-tour-popover .driver-popover-title {
+  font-family: var(--font-sans) !important;
+  font-size: 14px !important;
+  color: #1D366D !important;
+  font-weight: 800 !important;
+}
+
+.driver-popover.aapico-tour-popover .driver-popover-description {
+  font-family: var(--font-sans) !important;
+  font-size: 12px !important;
+  color: #475569 !important;
+  line-height: 1.6 !important;
+}
+
 
 

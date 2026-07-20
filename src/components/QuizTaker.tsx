@@ -87,6 +87,35 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
   const [result, setResult] = useState<EvaluationResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Attempts info state (Retry Feature)
+  const [attemptsInfo, setAttemptsInfo] = useState<{ attemptsCount: number; maxAttempts: number; allowed: boolean } | null>(null);
+
+  const fetchAttemptsInfo = async (identifier: string) => {
+    if (campaignId === "tour-demo-quiz") {
+      const mockInfo = { attemptsCount: 0, maxAttempts: 0, allowed: true };
+      setAttemptsInfo(mockInfo);
+      return mockInfo;
+    }
+    try {
+      const res = await fetch(`/api/campaigns/${campaignId}/attempts/${encodeURIComponent(identifier.trim())}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAttemptsInfo(data);
+        return data;
+      }
+    } catch (err) {
+      console.error("Error fetching attempts info:", err);
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    const activeId = userProfile?.emNo || userIdentifier;
+    if (activeId && campaignId) {
+      fetchAttemptsInfo(activeId);
+    }
+  }, [campaignId, userProfile?.emNo, userIdentifier, isAuthenticated]);
+
   // Storage local keys
   const storageKey = `quiz_progress_${campaignId}`;
 
@@ -107,6 +136,96 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
     showSuccess("ออกจากระบบสำเร็จ", "ระบบได้ทำการเคลียร์ข้อมูลค้างและออกจากระบบให้เรียบร้อยแล้ว");
   };
 
+  // Retry / restart exam logic
+  const handleRetryExam = async () => {
+    const activeIdentifier = userProfile?.emNo || userIdentifier;
+    if (!activeIdentifier) {
+      showWarning("ไม่พบบัญชีผู้ใช้", "กรุณาลงชื่อเข้าใช้ใหม่อีกครั้ง");
+      return;
+    }
+
+    // Refresh attempts information
+    const updatedInfo = await fetchAttemptsInfo(activeIdentifier);
+    const maxAttempts = updatedInfo?.maxAttempts || campaign?.maxAttempts || 0;
+    const count = updatedInfo?.attemptsCount ?? 0;
+
+    if (maxAttempts > 0 && count >= maxAttempts) {
+      showWarning(
+        "หมดสิทธิ์สอบห้องสอบนี้",
+        `คุณได้ใช้สิทธิ์ส่งข้อสอบห้องสอบนี้ครบแล้ว (${count}/${maxAttempts} ครั้ง) หากมีข้อสงสัยกรุณาติดต่อผู้ดูแลระบบ`
+      );
+      return;
+    }
+
+    const hasConfirmed = await showConfirm(
+      "ต้องการเริ่มทำข้อสอบใหม่ (Retry)?",
+      `คุณกำลังใช้สิทธิ์สอบครั้งถัดไป (ครั้งที่ ${count + 1} จากทั้งหมด ${maxAttempts > 0 ? maxAttempts : "ไม่จำกัด"} ครั้ง) เพื่อทำแบบทดสอบใหม่อีกครั้ง ยืนยันเริ่มทำข้อสอบใช่หรือไม่?`
+    );
+    if (!hasConfirmed) return;
+
+    // Clear exam state & progress cache
+    localStorage.removeItem(storageKey);
+    setShuffledQuestions([]);
+    setAnswers({});
+    setCurrentIdx(0);
+    setTimeRemaining(0);
+    setIsExamActive(false);
+    setResult(null);
+    setHasAcceptedInstruction(false);
+    setIsRegistered(false);
+
+    // Trigger start exam
+    handleStartExam();
+  };
+
+  const renderRetrySection = () => {
+    if (!attemptsInfo) return null;
+
+    const { attemptsCount, maxAttempts, allowed } = attemptsInfo;
+    const isUnlimited = maxAttempts === 0;
+    const remaining = isUnlimited ? 999 : (maxAttempts - attemptsCount);
+
+    return (
+      <div className="p-6 bg-slate-50 border border-slate-200/60 rounded-2xl space-y-4 text-center mt-6">
+        <div className="space-y-1.5">
+          <h4 className="text-sm font-bold text-slate-800 font-sans uppercase tracking-tight">
+            สถิติสิทธิ์การทำข้อสอบใหม่ (Retry attempts)
+          </h4>
+          <div className="flex flex-wrap justify-center items-center gap-3 text-xs">
+            <span className="px-2.5 py-1 bg-[#1D366D] text-white rounded-lg font-bold">
+              ทำสอบไปแล้ว: {attemptsCount} ครั้ง
+            </span>
+            <span className="px-2.5 py-1 bg-slate-200 text-slate-800 rounded-lg font-bold">
+              สิทธิ์ทั้งหมด: {isUnlimited ? "ไม่จำกัด" : `${maxAttempts} ครั้ง`}
+            </span>
+            <span className={`px-2.5 py-1 rounded-lg font-bold ${remaining > 0 ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>
+              {isUnlimited ? "เหลือสิทธิ์ทำใหม่อีก: ไม่จำกัดครั้ง" : `เหลือสิทธิ์ทำใหม่อีก: ${remaining} ครั้ง`}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          {allowed && (
+            <button
+              onClick={handleRetryExam}
+              className="w-full sm:w-auto px-8 py-3 bg-[#2DC84D] hover:bg-emerald-500 text-black rounded-full text-xs font-black uppercase tracking-wider transition-all duration-200 shadow-sm active:translate-y-[1px] cursor-pointer inline-flex items-center justify-center gap-2"
+            >
+              <Award size={14} />
+              เริ่มทำข้อสอบใหม่ (Retry)
+            </button>
+          )}
+          <button
+            onClick={handleLogout}
+            className="w-full sm:w-auto px-8 py-3 bg-[#1D366D] hover:bg-indigo-950 text-white rounded-full text-xs font-bold tracking-wider transition-all duration-200 shadow-sm hover:shadow-md active:translate-y-[1px] cursor-pointer inline-flex items-center justify-center gap-2"
+          >
+            <LogOut size={14} />
+            เสร็จสิ้นและออกจากระบบสอบ
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   // Timer Ref to count duration used
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -116,6 +235,50 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
       try {
         setLoading(true);
         setError(null);
+        if (campaignId === "tour-demo-quiz") {
+          const mockCampaignData = {
+            id: "tour-demo-quiz",
+            name: "ควิซสาธิตระบบ (Demo Quiz)",
+            groupName: "กลุ่มทดสอบ (Web Guided Tour)",
+            passingPercentage: 60,
+            timeLimitMinutes: 5,
+            questions: [
+              {
+                id: "q1",
+                text: "ข้อสอบ AAPICO SmartEval สนับสนุนการสอบรูปแบบใด?",
+                type: "single",
+                choices: [
+                  "เขียนคำตอบบนกระดาษ",
+                  "ออนไลน์ผ่าน E-Testing / E-Exam",
+                  "สอบปากเปล่าตัวต่อตัว",
+                  "ไม่มีข้อถูก"
+                ],
+                explanation: "แพลตฟอร์ม AAPICO SmartEval ออกแบบมาเพื่อการทำข้อสอบแบบออนไลน์ E-Testing / E-Exam ไร้กระดาษ"
+              },
+              {
+                id: "q2",
+                text: "ระบบ AAPICO SmartEval มีฟีเจอร์ใดต่อไปนี้สำหรับป้องกันการทุจริต?",
+                type: "single",
+                choices: [
+                  "ระบบตรวจสอบเรียลไทม์ (Live Lobby)",
+                  "สุ่มสลับโจทย์และตัวเลือกเฉพาะบุคคล",
+                  "ล็อกเอาต์เมื่อสิ้นสุดเวลาทำข้อสอบ",
+                  "ถูกทุกข้อ"
+                ],
+                explanation: "มีทั้งระบบตรวจสอบเรียลไทม์ (Live Lobby), ล็อกเอาต์อัตโนมัติ, และระบบสุ่มสลับข้อสอบและตัวเลือกเฉพาะบุคคล"
+              }
+            ],
+            isUntimed: false,
+            totalQuestionsToTest: 2,
+            maxAttempts: 0,
+            resultsDisplayMode: "full",
+            randomizationMode: "question_choice"
+          };
+          setCampaign(mockCampaignData as any);
+          setShuffledQuestions(mockCampaignData.questions as any);
+          setLoading(false);
+          return;
+        }
         const res = await fetch(`/api/campaigns/${campaignId}/student`);
         if (!res.ok) {
           const data = await res.json();
@@ -175,9 +338,131 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
     fetchCampaign();
   }, [campaignId]);
 
+  // Guided Tour Event and localStorage Synchronizer
+  useEffect(() => {
+    const applyTourStepState = (step: number) => {
+      if (step === 2) {
+        setIsAuthenticated(false);
+        setHasAcceptedInstruction(false);
+        setIsRegistered(false);
+        setIsExamActive(false);
+        setResult(null);
+      } else if (step === 3) {
+        setIsAuthenticated(true);
+        setHasAcceptedInstruction(false);
+        setIsRegistered(false);
+        setIsExamActive(false);
+        setResult(null);
+        setUserName("สมชาย รักเรียน");
+      } else if (step === 4) {
+        setIsAuthenticated(true);
+        setHasAcceptedInstruction(true);
+        setIsRegistered(false);
+        setIsExamActive(false);
+        setResult(null);
+        setUserProfile({
+          name: "สมชาย",
+          surname: "รักเรียน (Demo)",
+          emNo: "AH10009999",
+          department: "AAPICO IT Department",
+          companyEmail: "somchai.demo@aapico.com",
+          company: "AAPICO Hitech PLC",
+          jwt: "mock-jwt"
+        });
+      } else if (step === 5) {
+        setIsAuthenticated(true);
+        setHasAcceptedInstruction(true);
+        setIsRegistered(true);
+        setIsExamActive(true);
+        setResult(null);
+        setAnswers({});
+        setCurrentIdx(0);
+      } else if (step === 6) {
+        setIsAuthenticated(true);
+        setHasAcceptedInstruction(true);
+        setIsRegistered(true);
+        setIsExamActive(false);
+        
+        const correctCount = Object.keys(answers).filter(qId => {
+          if (qId === "q1") return answers[qId] === "ออนไลน์ผ่าน E-Testing / E-Exam";
+          if (qId === "q2") return answers[qId] === "ถูกทุกข้อ";
+          return false;
+        }).length || 2; // Default to 2 correct for demo if none selected
+
+        setResult({
+          scorePercent: (correctCount / 2) * 100,
+          totalQuestions: 2,
+          correctCount,
+          passed: (correctCount / 2) * 100 >= 60,
+          passingCriteria: 60,
+          answersEvaluation: [
+            {
+              questionId: "q1",
+              questionText: "ข้อสอบ AAPICO SmartEval สนับสนุนการสอบรูปแบบใด?",
+              correctAnswer: "ออนไลน์ผ่าน E-Testing / E-Exam",
+              selectedAnswer: answers["q1"] || "ออนไลน์ผ่าน E-Testing / E-Exam",
+              isCorrect: true,
+              explanation: "แพลตฟอร์ม AAPICO SmartEval ออกแบบมาเพื่อการทำข้อสอบแบบออนไลน์ E-Testing / E-Exam ไร้กระดาษ"
+            },
+            {
+              questionId: "q2",
+              questionText: "ระบบ AAPICO SmartEval มีฟีเจอร์ใดต่อไปนี้สำหรับป้องกันการทุจริต?",
+              correctAnswer: "ถูกทุกข้อ",
+              selectedAnswer: answers["q2"] || "ถูกทุกข้อ",
+              isCorrect: true,
+              explanation: "มีทั้งระบบตรวจสอบเรียลไทม์ (Live Lobby), ล็อกเอาต์อัตโนมัติ, และระบบสุ่มสลับข้อสอบและตัวเลือกเฉพาะบุคคล"
+            }
+          ]
+        });
+      }
+    };
+
+    // 1. Instantly check localStorage for any saved step on mount/campaign change
+    if (campaignId === "tour-demo-quiz") {
+      try {
+        const savedTourActive = localStorage.getItem("aapico_tour_active") === "true";
+        const savedTourStep = localStorage.getItem("aapico_tour_step");
+        if (savedTourActive && savedTourStep) {
+          const stepNum = Number(savedTourStep);
+          if (stepNum >= 2 && stepNum <= 6) {
+            applyTourStepState(stepNum);
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 2. Custom event listener as a real-time reactive trigger
+    const handleTourStepChange = (e: CustomEvent) => {
+      const step = e.detail.step;
+      if (campaignId === "tour-demo-quiz" && step >= 2 && step <= 6) {
+        applyTourStepState(step);
+      }
+    };
+
+    window.addEventListener("tour-step-changed", handleTourStepChange as any);
+    return () => {
+      window.removeEventListener("tour-step-changed", handleTourStepChange as any);
+    };
+  }, [campaignId, answers]);
+
   // Authentication Handler
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (campaignId === "tour-demo-quiz") {
+      const profile = {
+        name: "สมชาย",
+        surname: "รักเรียน (Demo)",
+        emNo: userIdentifier.trim() || "AH10009999",
+        department: "AAPICO IT Department",
+        companyEmail: "somchai.demo@aapico.com",
+        company: "AAPICO Hitech PLC",
+        jwt: "mock-jwt"
+      };
+      setUserProfile(profile);
+      setIsAuthenticated(true);
+      setUserName("สมชาย รักเรียน (Demo)");
+      return;
+    }
     if (!userIdentifier.trim() || !password.trim()) {
       showWarning("ข้อมูลไม่ครบถ้วน", "กรุณากรอก รหัสพนักงาน (EM No) และรหัสผ่าน");
       return;
@@ -256,6 +541,17 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
 
   const handleStartExam = async () => {
     const activeIdentifier = userProfile?.emNo || userIdentifier;
+    if (campaignId === "tour-demo-quiz") {
+      const initialSeconds = campaign.timeLimitMinutes * 60;
+      setShuffledQuestions(campaign.questions);
+      setAttemptId("tour-demo-attempt");
+      setTimeRemaining(initialSeconds);
+      setAnswers({});
+      setCurrentIdx(0);
+      setIsRegistered(true);
+      setIsExamActive(true);
+      return;
+    }
     if (!userName.trim() || !activeIdentifier.trim()) {
       showWarning("ข้อมูลไม่ครบถ้วน", "กรุณากรอกข้อมูลประจำตัวของคุณก่อนเข้าสอบ");
       return;
@@ -471,6 +767,43 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
       attemptId,
     };
 
+    if (campaignId === "tour-demo-quiz") {
+      const correctCount = Object.keys(answers).filter(qId => {
+        if (qId === "q1") return answers[qId] === "ออนไลน์ผ่าน E-Testing / E-Exam";
+        if (qId === "q2") return answers[qId] === "ถูกทุกข้อ";
+        return false;
+      }).length;
+
+      const evaluation = {
+        scorePercent: (correctCount / 2) * 100,
+        totalQuestions: 2,
+        correctCount,
+        passed: (correctCount / 2) * 100 >= 60,
+        passingCriteria: 60,
+        answersEvaluation: [
+          {
+            questionId: "q1",
+            questionText: "ข้อสอบ AAPICO SmartEval สนับสนุนการสอบรูปแบบใด?",
+            correctAnswer: "ออนไลน์ผ่าน E-Testing / E-Exam",
+            selectedAnswer: answers["q1"] || "ออนไลน์ผ่าน E-Testing / E-Exam",
+            isCorrect: answers["q1"] === "ออนไลน์ผ่าน E-Testing / E-Exam",
+            explanation: "แพลตฟอร์ม AAPICO SmartEval ออกแบบมาเพื่อการทำข้อสอบแบบออนไลน์ E-Testing / E-Exam ไร้กระดาษ"
+          },
+          {
+            questionId: "q2",
+            questionText: "ระบบ AAPICO SmartEval มีฟีเจอร์ใดต่อไปนี้สำหรับป้องกันการทุจริต?",
+            correctAnswer: "ถูกทุกข้อ",
+            selectedAnswer: answers["q2"] || "ถูกทุกข้อ",
+            isCorrect: answers["q2"] === "ถูกทุกข้อ",
+            explanation: "มีทั้งระบบตรวจสอบเรียลไทม์ (Live Lobby), ล็อกเอาต์อัตโนมัติ, และระบบสุ่มสลับข้อสอบและตัวเลือกเฉพาะบุคคล"
+          }
+        ]
+      };
+      setResult(evaluation as any);
+      setIsExamActive(false);
+      return;
+    }
+
     try {
       const res = await fetch(`/api/campaigns/${campaignId}/submit`, {
         method: "POST",
@@ -485,6 +818,9 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
 
       const evaluation = await res.json();
       setResult(evaluation);
+
+      // Refresh attempts count immediately
+      fetchAttemptsInfo(payload.emNo);
 
       // Successfully submitted, clear this campaign LocalStorage progress
       localStorage.removeItem(storageKey);
@@ -601,21 +937,13 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
           <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100/50 text-[11px] text-slate-600 font-sans leading-relaxed text-left">
             <strong>หมายเหตุ:</strong> ตามนโยบายการจัดสอบของฝ่ายประเมินผล ผลคะแนนสอบรายบุคคลของคุณจะไม่แสดงบนหน้านี้ทันที แต่จะนำส่งตรงไปยังฝ่ายทรัพยากรบุคคลหรือผู้บังคับบัญชาเพื่อพิจารณาอย่างเป็นทางการ
           </div>
-          <div className="pt-2">
-            <button
-              onClick={handleLogout}
-              className="w-full py-3 bg-[#1D366D] hover:bg-indigo-950 text-white rounded-full text-xs font-bold tracking-wide transition-all duration-200 shadow-sm active:translate-y-[1px] cursor-pointer inline-flex items-center justify-center gap-2"
-            >
-              <LogOut size={14} />
-              เสร็จสิ้นและออกจากระบบสอบ
-            </button>
-          </div>
+          {renderRetrySection()}
         </div>
       );
     }
 
     return (
-      <div className="max-w-2xl mx-auto my-8 space-y-6 text-left animate-in fade-in duration-300">
+      <div id="tour-score-card" className="max-w-2xl mx-auto my-8 space-y-6 text-left animate-in fade-in duration-300">
         {/* Pass / Fail Banner Card */}
         <div
           className={`p-8 rounded-2xl text-center relative overflow-hidden border shadow-md ${
@@ -660,7 +988,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
 
         {/* Detailed Instant Checker Breakdown (ONLY if Mode is "full") */}
         {displayMode === "full" ? (
-          <div className="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+          <div id="tour-review-box" className="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
             <div className="border-b border-slate-100 pb-4">
               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide flex items-center gap-2 font-sans">
                 <FileText size={18} className="text-[#1D366D]" />
@@ -743,16 +1071,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
           </div>
         )}
         
-        {/* Finish and Logout Button */}
-        <div className="pt-4 text-center">
-          <button
-            onClick={handleLogout}
-            className="px-8 py-3 bg-[#1D366D] hover:bg-indigo-950 text-white rounded-full text-xs font-bold tracking-wider transition-all duration-200 shadow-sm hover:shadow-md active:translate-y-[1px] cursor-pointer inline-flex items-center gap-2"
-          >
-            <LogOut size={14} />
-            เสร็จสิ้นและออกจากระบบสอบ
-          </button>
-        </div>
+        {renderRetrySection()}
       </div>
     );
   }
@@ -760,7 +1079,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
   // B1. Secure Authentication Login Screen
   if (!isAuthenticated) {
     return (
-      <div className="max-w-md mx-auto my-12 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden animate-in fade-in duration-300 text-left">
+      <div id="tour-login-card" className="max-w-md mx-auto my-12 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden animate-in fade-in duration-300 text-left">
         {/* Banner with Key icon */}
         <div className="bg-[#1D366D] p-8 text-white text-center space-y-2">
           <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mx-auto">
@@ -781,6 +1100,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
                 <User size={14} className="text-slate-400" /> รหัสพนักงาน (EM No)
               </label>
               <input
+                id="tour-em-no-input"
                 type="text"
                 required
                 placeholder="กรอกรหัสพนักงานของคุณ เช่น AH1000xxxx"
@@ -796,6 +1116,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
                 <Lock size={14} className="text-slate-400" /> รหัสผ่าน (Password)
               </label>
               <input
+                id="tour-password-input"
                 type="password"
                 required
                 placeholder="กรอกรหัสผ่านเข้าใช้งานระบบ"
@@ -815,6 +1136,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
           </div>
 
           <button
+            id="tour-login-btn"
             type="submit"
             disabled={authLoading}
             className="w-full py-3 bg-[#1D366D] hover:bg-indigo-950 text-white rounded-full text-xs font-bold tracking-wider shadow-sm hover:shadow-md disabled:opacity-50 transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 font-sans"
@@ -839,7 +1161,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
   // B1.5 Instruction Page (User Workflow Step 1)
   if (!hasAcceptedInstruction) {
     return (
-      <div className="max-w-xl mx-auto my-12 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden animate-in fade-in duration-300 text-left">
+      <div id="tour-instruction-card" className="max-w-xl mx-auto my-12 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden animate-in fade-in duration-300 text-left">
         <div className="bg-[#1D366D] p-8 text-white text-center space-y-2">
           <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mx-auto">
             <FileText className="text-white" size={24} />
@@ -947,7 +1269,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
   // B2. Pre-test Verified Profile Gate Screen (Verification Required)
   if (!isRegistered) {
     return (
-      <div className="max-w-md mx-auto my-12 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden animate-in fade-in duration-300 text-left">
+      <div id="tour-profile-card" className="max-w-md mx-auto my-12 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden animate-in fade-in duration-300 text-left">
         {/* Verification banner header */}
         <div className="bg-[#1D366D] p-8 text-white text-center space-y-2">
           <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mx-auto">
@@ -1036,6 +1358,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
           {/* Buttons row */}
           <div className="space-y-2.5 pt-2">
             <button
+              id="tour-start-exam-btn"
               onClick={handleStartExam}
               className="w-full py-3 bg-[#2DC84D] hover:bg-emerald-500 text-black rounded-full text-xs font-bold tracking-wider shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
             >
@@ -1073,11 +1396,11 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
   const isTimeUrgent = !campaign?.isUntimed && timeRemaining < 120; // less than 2 minutes left
 
   return (
-    <div className="max-w-4xl mx-auto my-6 grid grid-cols-1 lg:grid-cols-4 gap-6 items-start text-left animate-in fade-in duration-300">
+    <div id="tour-exam-container" className="max-w-4xl mx-auto my-6 grid grid-cols-1 lg:grid-cols-4 gap-6 items-start text-left animate-in fade-in duration-300">
       {/* Sidebar: Navigation Grid & Clock */}
       <div className="lg:col-span-1 space-y-4 lg:sticky lg:top-4 order-last lg:order-first">
         {/* Floating Timer Card */}
-        <div className={`p-4 border rounded-2xl shadow-sm flex items-center justify-between transition-all duration-300 ${
+        <div id="tour-timer-box" className={`p-4 border rounded-2xl shadow-sm flex items-center justify-between transition-all duration-300 ${
           !campaign?.isUntimed && isTimeUrgent 
             ? "bg-rose-50 border-rose-100 text-rose-800 animate-pulse shadow-rose-100/50" 
             : "bg-white border-slate-100 text-slate-800"
@@ -1121,9 +1444,9 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
         </div>
 
         {/* Student Progress Map Grid */}
-        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm space-y-3">
+        <div id="tour-navigation-grid" className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm space-y-3">
           <div className="flex justify-between items-center border-b border-slate-50 pb-2.5">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">แผงข้อสอบ</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-semibold">แผงข้อสอบ</span>
             <span className="text-xs font-semibold text-slate-700 bg-slate-50 px-2.5 py-1 rounded-full">
               ทำแล้ว {answeredCount}/{shuffledQuestions.length} ข้อ
             </span>
@@ -1199,7 +1522,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
         {layoutMode === "scroll" ? (
           <div className="space-y-6">
             {shuffledQuestions.map((q, qIdx) => (
-              <div key={q.id} id={`scroll-question-${qIdx}`} className="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 shadow-sm space-y-5 transition-all scroll-mt-6">
+              <div key={q.id} id={`scroll-question-${qIdx}`} className="bg-slate-100 border-2 border-slate-400/70 rounded-2xl p-6 sm:p-8 shadow-md space-y-5 transition-all scroll-mt-6 hover:border-slate-500">
                 <h3 className="text-sm sm:text-base font-bold text-slate-800 leading-relaxed font-sans">
                   ข้อที่ {qIdx + 1}. {q.text}
                 </h3>
@@ -1213,16 +1536,16 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
                           handleSelectOption(q.id, option);
                           setCurrentIdx(qIdx);
                         }}
-                        className={`w-full text-left p-4 rounded-xl text-xs font-semibold border transition-all duration-200 cursor-pointer flex items-center gap-3 ${
+                        className={`w-full text-left p-4 rounded-xl text-xs font-bold border transition-all duration-200 cursor-pointer flex items-center gap-3 ${
                           isChecked
-                            ? "bg-indigo-50/40 border-[#1D366D] text-slate-900 shadow-sm"
-                            : "bg-white hover:bg-slate-50 border-slate-100 text-slate-600"
+                            ? "bg-[#1D366D] border-[#1D366D] text-white shadow-md ring-2 ring-[#1D366D]/25"
+                            : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700 hover:text-slate-900"
                         }`}
                       >
-                        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-all duration-200 ${
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shrink-0 transition-all duration-200 ${
                           isChecked
-                            ? "bg-[#1D366D] text-white"
-                            : "bg-slate-100 text-slate-500"
+                            ? "bg-white text-[#1D366D]"
+                            : "bg-slate-100 text-slate-500 border border-slate-200"
                         }`}>
                           {String.fromCharCode(65 + oIdx)}
                         </span>
@@ -1235,8 +1558,8 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
             ))}
 
             {/* Scroll Submit Banner */}
-            <div className="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-              <span className="text-xs text-slate-400 font-semibold leading-relaxed">
+            <div className="bg-slate-100 border-2 border-slate-400/70 rounded-2xl p-6 sm:p-8 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
+              <span className="text-xs text-slate-500 font-semibold leading-relaxed">
                 กรุณาตรวจสอบความถูกต้องของคำตอบทั้งหมด <span className="font-bold text-slate-700">{answeredCount} / {shuffledQuestions.length} ข้อ</span> ก่อนกดยืนยันส่งคะแนนประเมิน
               </span>
               <button
@@ -1252,7 +1575,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
         ) : (
           /* Question Slider Container */
           activeQuestion && (
-            <div className="bg-white border border-slate-100 rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col justify-between min-h-[40vh] space-y-6">
+            <div className="bg-slate-100 border-2 border-slate-400/70 rounded-2xl p-6 sm:p-8 shadow-md flex flex-col justify-between min-h-[40vh] space-y-6">
               <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">
                 {/* Question Text */}
                 <h3 className="text-sm sm:text-base font-bold text-slate-800 leading-relaxed font-sans">
@@ -1268,16 +1591,16 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
                       <button
                         key={oIdx}
                         onClick={() => handleSelectOption(activeQuestion.id, option)}
-                        className={`w-full text-left p-4 rounded-xl text-xs font-semibold border transition-all duration-200 cursor-pointer flex items-center gap-3 ${
+                        className={`w-full text-left p-4 rounded-xl text-xs font-bold border transition-all duration-200 cursor-pointer flex items-center gap-3 ${
                           isChecked
-                            ? "bg-indigo-50/40 border-[#1D366D] text-slate-900 shadow-sm"
-                            : "bg-white hover:bg-slate-50 border-slate-100 text-slate-600"
+                            ? "bg-[#1D366D] border-[#1D366D] text-white shadow-md ring-2 ring-[#1D366D]/25"
+                            : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700 hover:text-slate-900"
                         }`}
                       >
-                        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-all duration-200 ${
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-xs shrink-0 transition-all duration-200 ${
                           isChecked
-                            ? "bg-[#1D366D] text-white"
-                            : "bg-slate-100 text-slate-500"
+                            ? "bg-white text-[#1D366D]"
+                            : "bg-slate-100 text-slate-500 border border-slate-200"
                         }`}>
                           {String.fromCharCode(65 + oIdx)}
                         </span>
