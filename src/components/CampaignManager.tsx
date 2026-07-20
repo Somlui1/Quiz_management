@@ -8,7 +8,7 @@ import {
   Play, Square, Trash2, Edit, BarChart3, Plus, 
   Link2, Calendar, Clock, CheckCircle, ShieldAlert, 
   Copy, Check, FileText, ChevronRight, ArrowLeft, ArrowRight, Eye, HelpCircle, AlertCircle, Award, RotateCcw, Settings, Search, Layers,
-  ShoppingCart, ShoppingBag, X, Filter
+  ShoppingCart, ShoppingBag, X, Filter, MoreVertical
 } from "lucide-react";
 
 export default function CampaignManager() {
@@ -40,6 +40,24 @@ export default function CampaignManager() {
   const [shareCampaign, setShareCampaign] = useState<Campaign | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const [copiedCampaignId, setCopiedCampaignId] = useState<string | null>(null);
+
+  // Dropdown states for admin operations
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (openDropdownId) {
+        const target = e.target as HTMLElement;
+        if (!target.closest(".admin-dropdown-container")) {
+          setOpenDropdownId(null);
+        }
+      }
+    };
+    document.addEventListener("click", handleOutsideClick);
+    return () => {
+      document.removeEventListener("click", handleOutsideClick);
+    };
+  }, [openDropdownId]);
 
   const handleCopyCampaignId = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -787,60 +805,92 @@ export default function CampaignManager() {
                       </div>
 
                       {/* Admin Operations Section (Reset, Edit, Delete) */}
+                      {/* Admin Operations Section (Redesigned with Dropdown) */}
                       <div className="mt-3 pt-3 border-t border-slate-100 flex flex-col gap-2">
-                        <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                          <span>สร้างเมื่อ {new Date(camp.createdAt).toLocaleDateString("th-TH")}</span>
-                          <span className="text-[#1D366D]">เครื่องมือผู้ดูแลระบบ</span>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                          {/* 1. รีเซ็ตผลห้องสอบ */}
-                          <button
-                            type="button"
-                            onClick={() => handleResetCampaign(camp.id, camp.name)}
-                            className="inline-flex items-center justify-center gap-1.5 px-2 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200/80 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer shadow-2xs active:scale-[0.98]"
-                            title="รีเซ็ตผลสอบและรายชื่อในห้องสอบนี้ให้เริ่มใหม่ทั้งหมด"
-                          >
-                            <RotateCcw size={13} className="shrink-0 text-amber-600" />
-                            <span>รีเซ็ตผล</span>
-                          </button>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            สร้างเมื่อ {new Date(camp.createdAt).toLocaleDateString("th-TH")}
+                          </span>
+                          
+                          <div className="flex items-center gap-2 relative admin-dropdown-container">
+                            {/* Primary Edit Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleEdit(camp)}
+                              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer shadow-xs active:scale-[0.98]"
+                              title="แก้ไขคำถาม โครงสร้างตัวเลือก และรายละเอียดแคมเปญ"
+                            >
+                              <Edit size={13} className="shrink-0" />
+                              <span>แก้ไขห้อง</span>
+                            </button>
 
-                          {/* 2. แก้ไขคำถาม/ตัวฟอร์ม */}
-                          <button
-                            type="button"
-                            onClick={() => handleEdit(camp)}
-                            className="inline-flex items-center justify-center gap-1.5 px-2 py-2.5 bg-slate-50 hover:bg-indigo-50 hover:text-[#1D366D] hover:border-[#1D366D]/30 text-slate-700 border border-slate-200/80 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer shadow-2xs active:scale-[0.98]"
-                            title="แก้ไขคำถาม โครงสร้างตัวเลือก และรายละเอียดแคมเปญ"
-                          >
-                            <Edit size={13} className="shrink-0 text-slate-500" />
-                            <span>แก้ไขห้อง</span>
-                          </button>
+                            {/* Dropdown Toggle Button */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenDropdownId(openDropdownId === camp.id ? null : camp.id);
+                              }}
+                              className={`p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 transition-all duration-200 cursor-pointer ${
+                                openDropdownId === camp.id ? "bg-slate-100 border-slate-300" : "bg-white"
+                              }`}
+                              title="เครื่องมือจัดการเพิ่มเติม"
+                            >
+                              <MoreVertical size={14} />
+                            </button>
 
-                          {/* 3. ลบห้องสอบพร้อมเงื่อนไขห้ามลบเมื่อ ACTIVE */}
-                          <button
-                            type="button"
-                            disabled={camp.status === "ACTIVE"}
-                            onClick={() => handleDelete(camp.id)}
-                            className={`inline-flex items-center justify-center gap-1.5 px-2 py-2.5 border rounded-xl text-xs font-bold transition-all duration-200 shadow-2xs active:scale-[0.98] ${
-                              camp.status === "ACTIVE"
-                                ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-55"
-                                : "bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200/80 cursor-pointer"
-                            }`}
-                            title={camp.status === "ACTIVE" ? "ห้ามลบห้องสอบในระหว่างที่ระบบเปิดสอบอยู่ (ACTIVE) กรุณาปิดระบบสอบก่อน" : "ลบห้องสอบนี้ทิ้งถาวร"}
-                          >
-                            <Trash2 size={13} className={`shrink-0 ${camp.status === "ACTIVE" ? "text-slate-350" : "text-rose-600"}`} />
-                            <span>ลบห้อง</span>
-                          </button>
+                            {/* Dropdown Menu */}
+                            {openDropdownId === camp.id && (
+                              <div className="absolute right-0 bottom-full mb-2 w-48 bg-white border border-slate-200 rounded-2xl shadow-lg py-2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150 origin-bottom-right">
+                                {/* 1. คัดลอกห้องสอบ (Clone) */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenDropdownId(null);
+                                    handleCloneCampaign(camp.id, camp.name);
+                                  }}
+                                  className="w-full px-4 py-2.5 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 flex items-center gap-2 transition-all cursor-pointer"
+                                >
+                                  <Copy size={13} className="text-slate-400 group-hover:text-indigo-500" />
+                                  <span>คัดลอกห้องสอบ</span>
+                                </button>
 
-                          {/* 4. คัดลอกห้องสอบ (Clone) */}
-                          <button
-                            type="button"
-                            onClick={() => handleCloneCampaign(camp.id, camp.name)}
-                            className="inline-flex items-center justify-center gap-1.5 px-2 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer shadow-2xs active:scale-[0.98]"
-                            title="คัดลอกรายละเอียดและคำถามของห้องสอบนี้ไปสร้างห้องสอบใหม่"
-                          >
-                            <Copy size={13} className="shrink-0 text-indigo-600" />
-                            <span>คัดลอกห้อง</span>
-                          </button>
+                                {/* 2. รีเซ็ตผลห้องสอบ */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenDropdownId(null);
+                                    handleResetCampaign(camp.id, camp.name);
+                                  }}
+                                  className="w-full px-4 py-2.5 text-left text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-amber-600 flex items-center gap-2 transition-all cursor-pointer"
+                                >
+                                  <RotateCcw size={13} className="text-slate-400 group-hover:text-amber-500" />
+                                  <span>รีเซ็ตผลสอบ</span>
+                                </button>
+
+                                <div className="h-px bg-slate-100 my-1"></div>
+
+                                {/* 3. ลบห้องสอบ */}
+                                <button
+                                  type="button"
+                                  disabled={camp.status === "ACTIVE"}
+                                  onClick={() => {
+                                    setOpenDropdownId(null);
+                                    handleDelete(camp.id);
+                                  }}
+                                  className={`w-full px-4 py-2.5 text-left text-xs font-bold flex items-center gap-2 transition-all ${
+                                    camp.status === "ACTIVE"
+                                      ? "text-slate-350 cursor-not-allowed opacity-50"
+                                      : "text-rose-600 hover:bg-rose-50 cursor-pointer"
+                                  }`}
+                                  title={camp.status === "ACTIVE" ? "ห้ามลบห้องสอบในระหว่างที่ระบบเปิดสอบอยู่" : "ลบห้องสอบทิ้งถาวร"}
+                                >
+                                  <Trash2 size={13} className={camp.status === "ACTIVE" ? "text-slate-350" : "text-rose-600"} />
+                                  <span>ลบห้องสอบ</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         {camp.status === "ACTIVE" && (
                           <div className="text-[10px] font-bold text-rose-600 flex items-center gap-1.5 mt-1 px-2.5 py-1.5 bg-rose-50 border border-rose-100 rounded-lg animate-pulse">
