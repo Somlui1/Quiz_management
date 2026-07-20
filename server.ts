@@ -435,6 +435,19 @@ try {
 // Cache of campaign-specific database connections
 const campaignDbs = new Map<string, Database.Database>();
 const liveClients = new Map<string, any[]>();
+const campaignManagerClients = new Set<any>();
+
+function broadcastCampaignsChange() {
+  const payloadStr = JSON.stringify({ type: "campaigns-changed" });
+  campaignManagerClients.forEach(client => {
+    try {
+      client.write(`data: ${payloadStr}\n\n`);
+    } catch (e) {
+      campaignManagerClients.delete(client);
+    }
+  });
+}
+
 const activeParticipants = new Map<string, Map<string, any>>();
 
 // Stress-test simulation timeouts tracking to allow 100% reliable aborts
@@ -1808,6 +1821,8 @@ async function startServer() {
       // Create isolated DB and tables for this campaign immediately
       getCampaignDb(id);
 
+      broadcastCampaignsChange();
+
       res.status(201).json({ success: true, id });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -1888,6 +1903,8 @@ async function startServer() {
         }
       }
 
+      broadcastCampaignsChange();
+
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -1935,6 +1952,7 @@ async function startServer() {
       }
 
       console.log(`Campaign room '${id}' reset successful.`);
+      broadcastCampaignsChange();
       res.json({ success: true, message: "รีเซ็ตข้อมูลรายชื่อและประวัติคะแนนสอบทั้งหมดของห้องนี้สำเร็จแล้ว" });
     } catch (err: any) {
       console.error(`Unexpected campaign reset error:`, err);
@@ -1984,7 +2002,85 @@ async function startServer() {
         console.error("Failed to delete SHM file:", e);
       }
 
+      broadcastCampaignsChange();
       res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // API: Clone a campaign
+  app.post("/api/campaigns/:id/clone", express.json(), (req, res) => {
+    try {
+      const { id } = req.params;
+      const campaign = masterDb.prepare("SELECT * FROM campaigns WHERE id = ?").get(id) as any;
+      if (!campaign) {
+        return res.status(404).json({ error: "ไม่พบห้องสอบต้นฉบับที่ต้องการคัดลอก" });
+      }
+
+      const { customId } = req.body || {};
+      let newId = "";
+
+      if (customId && customId.trim() !== "") {
+        newId = customId.trim();
+        // Validation check for ID format
+        if (!/^[a-zA-Z0-9_-]+$/.test(newId)) {
+          return res.status(400).json({ error: "รหัสห้องสอบต้องเป็นภาษาอังกฤษ ตัวเลข เครื่องหมายขีดกลาง (-) หรือเครื่องหมายขีดล่าง (_) เท่านั้น ห้ามมีช่องว่างหรือตัวอักษรพิเศษ" });
+        }
+        // Validation check for ID uniqueness
+        const duplicate = masterDb.prepare("SELECT id FROM campaigns WHERE id = ?").get(newId);
+        if (duplicate) {
+          return res.status(400).json({ error: "รหัสห้องสอบนี้ถูกใช้งานแล้ว กรุณากรอกรหัสอื่น" });
+        }
+      } else {
+        newId = "camp_" + Math.random().toString(36).substr(2, 6);
+      }
+
+      const newName = `${campaign.name} (Clone)`;
+      const now = new Date().toISOString();
+
+      const stmt = masterDb.prepare(`
+        INSERT INTO campaigns (
+          id, name, group_name, status, start_time, end_time, passing_percentage, 
+          time_limit_minutes, total_questions_to_test, max_attempts, results_display_mode, 
+          is_untimed, randomization_mode, questions_json, created_at,
+          question_selection_mode, manual_question_ids_json, rule_category, rule_difficulty, rule_count, target_booklet,
+          updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      stmt.run(
+        newId,
+        newName,
+        campaign.group_name,
+        "DRAFT", // Cloned campaigns default to DRAFT
+        campaign.start_time,
+        campaign.end_time,
+        campaign.passing_percentage,
+        campaign.time_limit_minutes,
+        campaign.total_questions_to_test,
+        campaign.max_attempts,
+        campaign.results_display_mode,
+        campaign.is_untimed,
+        campaign.randomization_mode,
+        campaign.questions_json,
+        now,
+        campaign.question_selection_mode,
+        campaign.manual_question_ids_json,
+        campaign.rule_category,
+        campaign.rule_difficulty,
+        campaign.rule_count,
+        campaign.target_booklet,
+        now
+      );
+
+      // Create isolated DB and tables for this campaign immediately
+      getCampaignDb(newId);
+
+      broadcastCampaignsChange();
+
+      res.status(201).json({ success: true, id: newId });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -2513,6 +2609,22 @@ async function startServer() {
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
+  });
+
+  // API: SSE connection for real-time campaign list updates
+  app.get("/api/campaigns/updates-sse", (req, res) => {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+
+    res.write(`data: ${JSON.stringify({ type: "connected" })}\n\n`);
+
+    campaignManagerClients.add(res);
+
+    req.on("close", () => {
+      campaignManagerClients.delete(res);
+    });
   });
 
   // API: SSE Live connection for real-time live board updates

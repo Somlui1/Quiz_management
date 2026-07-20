@@ -3,7 +3,7 @@ import { Campaign, Question } from "../types";
 import FormBuilder from "./FormBuilder";
 import BulkUpload from "./BulkUpload";
 import CampaignAnalytics from "./CampaignAnalytics";
-import { showSuccess, showError, showWarning, showConfirm } from "../lib/swal";
+import { showSuccess, showError, showWarning, showConfirm, showPrompt } from "../lib/swal";
 import { 
   Play, Square, Trash2, Edit, BarChart3, Plus, 
   Link2, Calendar, Clock, CheckCircle, ShieldAlert, 
@@ -87,6 +87,47 @@ export default function CampaignManager() {
     fetchPackets();
   }, []);
 
+  // Subscribe to real-time campaign list updates
+  useEffect(() => {
+    let eventSource: EventSource | null = null;
+    let reconnectTimeout: any = null;
+
+    const connectSSE = () => {
+      eventSource = new EventSource("/api/campaigns/updates-sse");
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "campaigns-changed") {
+            fetchCampaigns(true); // Silent reload
+          }
+        } catch (e) {
+          console.error("Error parsing campaign update SSE message:", e);
+        }
+      };
+
+      eventSource.onerror = (err) => {
+        console.warn("Campaign updates SSE disconnected. Reconnecting in 3 seconds...", err);
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+        }
+        reconnectTimeout = setTimeout(connectSSE, 3000);
+      };
+    };
+
+    connectSSE();
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+    };
+  }, []);
+
   // Tour Step Synchronizer for Proctor Dashboard
   useEffect(() => {
     const applyStep7State = () => {
@@ -154,17 +195,17 @@ export default function CampaignManager() {
     }
   };
 
-  const fetchCampaigns = async () => {
+  const fetchCampaigns = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await fetch("/api/campaigns");
       if (!res.ok) throw new Error("Failed to load campaigns");
       const data = await res.json();
       setCampaigns(data);
     } catch (err: any) {
-      setError(err.message || "เกิดข้อผิดพลาดในการดึงข้อมูลห้องสอบ");
+      if (!silent) setError(err.message || "เกิดข้อผิดพลาดในการดึงข้อมูลห้องสอบ");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -336,6 +377,44 @@ export default function CampaignManager() {
       fetchCampaigns();
     } catch (err: any) {
       showError("ไม่สามารถรีเซ็ตห้องสอบได้", err.message);
+    }
+  };
+
+  const handleCloneCampaign = async (id: string, name: string) => {
+    const customId = await showPrompt(
+      "คัดลอกห้องสอบ",
+      `ระบบจะสร้างห้องสอบใหม่จาก "${name}"\n\nระบุรหัสห้องสอบใหม่ (เฉพาะภาษาอังกฤษ ตัวเลข ขีดกลาง - หรือขีดล่าง _ เท่านั้น หรือเว้นว่างไว้เพื่อสุ่มรหัส)`
+    );
+
+    if (customId === null) {
+      // User clicked cancel
+      return;
+    }
+
+    const trimmedId = customId.trim();
+    if (trimmedId !== "" && !/^[a-zA-Z0-9_-]+$/.test(trimmedId)) {
+      showError(
+        "รหัสห้องสอบไม่ถูกต้อง",
+        "รหัสห้องสอบต้องประกอบด้วยภาษาอังกฤษ ตัวเลข เครื่องหมายขีดกลาง (-) หรือเครื่องหมายขีดล่าง (_) เท่านั้น ห้ามมีช่องว่างหรือตัวอักษรพิเศษ"
+      );
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/campaigns/${id}/clone`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customId: trimmedId })
+      });
+      
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "เกิดข้อผิดพลาดในการคัดลอก");
+      }
+      showSuccess("คัดลอกห้องสอบสำเร็จ", "สร้างห้องสอบใหม่เรียบร้อยแล้ว");
+      fetchCampaigns();
+    } catch (err: any) {
+      showError("ไม่สามารถคัดลอกได้", err.message);
     }
   };
 
@@ -713,7 +792,7 @@ export default function CampaignManager() {
                           <span>สร้างเมื่อ {new Date(camp.createdAt).toLocaleDateString("th-TH")}</span>
                           <span className="text-[#1D366D]">เครื่องมือผู้ดูแลระบบ</span>
                         </div>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                           {/* 1. รีเซ็ตผลห้องสอบ */}
                           <button
                             type="button"
@@ -750,6 +829,17 @@ export default function CampaignManager() {
                           >
                             <Trash2 size={13} className={`shrink-0 ${camp.status === "ACTIVE" ? "text-slate-350" : "text-rose-600"}`} />
                             <span>ลบห้อง</span>
+                          </button>
+
+                          {/* 4. คัดลอกห้องสอบ (Clone) */}
+                          <button
+                            type="button"
+                            onClick={() => handleCloneCampaign(camp.id, camp.name)}
+                            className="inline-flex items-center justify-center gap-1.5 px-2 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer shadow-2xs active:scale-[0.98]"
+                            title="คัดลอกรายละเอียดและคำถามของห้องสอบนี้ไปสร้างห้องสอบใหม่"
+                          >
+                            <Copy size={13} className="shrink-0 text-indigo-600" />
+                            <span>คัดลอกห้อง</span>
                           </button>
                         </div>
                         {camp.status === "ACTIVE" && (
