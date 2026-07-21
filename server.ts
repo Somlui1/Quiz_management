@@ -2637,6 +2637,23 @@ async function startServer() {
         });
       }
 
+      const displayMode = campaign.results_display_mode || "full";
+
+      // Sanitize evaluation returned to client based on results display mode
+      const clientAnswersEvaluation = answersEvaluation.map((ev: any) => {
+        if (displayMode === "score" || displayMode === "hidden") {
+          return {
+            questionId: ev.questionId,
+            questionText: ev.questionText,
+            selectedAnswer: ev.selectedAnswer,
+            isCorrect: ev.isCorrect,
+            correctAnswer: "",
+            explanation: "",
+          };
+        }
+        return ev;
+      });
+
       res.json({
         success: true,
         scorePercent: parseFloat(score.toFixed(1)),
@@ -2644,7 +2661,8 @@ async function startServer() {
         correctCount: correctAnswers,
         passed: passed === 1,
         passingCriteria: campaign.passing_percentage,
-        answersEvaluation,
+        resultsDisplayMode: displayMode,
+        answersEvaluation: clientAnswersEvaluation,
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message });

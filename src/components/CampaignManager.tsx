@@ -503,6 +503,7 @@ export default function CampaignManager() {
     const updated = {
       ...camp,
       status: newStatus,
+      resultsDisplayMode: camp.resultsDisplayMode || "full",
     };
 
     try {

@@ -920,7 +920,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
 
   // A. Score Evaluation Result Screen (Criteria/Instant Checker)
   if (result) {
-    const displayMode = campaign.resultsDisplayMode || "full";
+    const displayMode = (result as any).resultsDisplayMode || campaign?.resultsDisplayMode || "full";
 
     if (displayMode === "hidden") {
       return (
