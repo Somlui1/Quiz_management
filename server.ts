@@ -193,10 +193,14 @@ try {
 
 // Seed default exam packet, questions, and active campaign
 try {
-  // Clear existing packets, questions, and campaigns to fulfill requirement: "จัดชุดของให้เหลือเเค่ชุด เดียว พร้อมตั้งห้องสอบให้ข้อสอบชุดนี้"
-  masterDb.prepare("DELETE FROM exam_packets").run();
-  masterDb.prepare("DELETE FROM questions").run();
-  masterDb.prepare("DELETE FROM campaigns").run();
+  const existingCampaigns = masterDb.prepare("SELECT COUNT(*) as count FROM campaigns").get() as { count: number };
+  const existingPackets = masterDb.prepare("SELECT COUNT(*) as count FROM exam_packets").get() as { count: number };
+
+  if (existingCampaigns.count === 0 && existingPackets.count === 0) {
+    // Clear existing packets, questions, and campaigns to fulfill requirement: "จัดชุดของให้เหลือเเค่ชุด เดียว พร้อมตั้งห้องสอบให้ข้อสอบชุดนี้"
+    masterDb.prepare("DELETE FROM exam_packets").run();
+    masterDb.prepare("DELETE FROM questions").run();
+    masterDb.prepare("DELETE FROM campaigns").run();
 
   const insertP = masterDb.prepare("INSERT INTO exam_packets (id, name, created_at) VALUES (?, ?, ?)");
   insertP.run("p_m365", "ชุดข้อสอบ Microsoft 365 & Copilot", new Date().toISOString());
@@ -434,7 +438,10 @@ try {
     new Date().toISOString()
   );
 
-  console.log("Database initialized successfully with exactly 1 Microsoft 365 & Copilot packet and 1 Active Campaign room.");
+    console.log("Database initialized successfully with exactly 1 Microsoft 365 & Copilot packet and 1 Active Campaign room.");
+  } else {
+    console.log("Database already initialized with existing data. Skipping seed.");
+  }
 } catch (err) {
   console.error("Error initializing Microsoft 365 database seed:", err);
 }
