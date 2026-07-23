@@ -7,6 +7,8 @@ services:
       dockerfile: Dockerfile
     container_name: quizmaster-app
     restart: unless-stopped
+    ports:
+      - "3000:3000"
     expose:
       - "3000"
     volumes:
