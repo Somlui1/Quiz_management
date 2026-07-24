@@ -493,7 +493,7 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
       const fetchedEmNo = userObj["em No"] || userObj.emNo || userObj.em_no || userObj.employeeNumber || userIdentifier.trim();
       const fetchedDepartment = userObj.department || userObj.dept || "";
       const fetchedEmail = userObj["company email"] || userObj.companyEmail || userObj.company_email || userObj.email || "";
-      const fetchedCompany = userObj.company || "";
+      const fetchedCompany = userObj.company || userObj.comp || userObj.companyName || userObj.company_name || "";
       const jwtToken = data.jwt || data.token || "";
 
       const profile = {
@@ -641,7 +641,8 @@ export default function QuizTaker({ campaignId }: QuizTakerProps) {
       body: JSON.stringify({
         userIdentifier: activeIdentifier.trim(),
         userName: userName.trim(),
-        department: department.trim()
+        department: department.trim(),
+        company: (userProfile?.company || "").trim()
       })
     }).catch(err => console.error("Error joining live lobby:", err));
   };

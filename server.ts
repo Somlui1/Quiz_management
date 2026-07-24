@@ -3135,7 +3135,8 @@ async function startServer() {
         const dept = depts[i % depts.length];
         const surname = lName;
         const companyEmail = `${empId.toLowerCase()}@aapico.com`;
-        const company = "AAPICO Plastics";
+        const companies = ["AAPICO Hitech", "AAPICO Plastics", "AAPICO Forging", "AAPICO ITS", "AAPICO Structural"];
+        const company = companies[i % companies.length];
 
         let status: "JOINED" | "PASSED" | "FAILED" = "JOINED";
         if (i >= 15 && i < 40) {

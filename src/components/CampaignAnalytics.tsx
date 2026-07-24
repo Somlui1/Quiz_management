@@ -161,30 +161,25 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
 
   const resolveAttendanceDetails = (userIdentifier: string, importedName?: string, importedDept?: string, importedCompany?: string) => {
     const sub = submissions.find(s => s.userIdentifier === userIdentifier);
-    if (sub) {
-      return {
-        userName: sub.userName || importedName || "ไม่ระบุชื่อ",
-        department: sub.department || importedDept || "ไม่ระบุแผนก",
-        company: sub.company || importedCompany || "ไม่ระบุบริษัท",
-        matched: true
-      };
-    }
-    
     const active = activeParticipants.find(p => p.userIdentifier === userIdentifier);
-    if (active) {
-      return {
-        userName: active.userName || importedName || "ไม่ระบุชื่อ",
-        department: active.department || importedDept || "ไม่ระบุแผนก",
-        company: importedCompany || "ไม่ระบุบริษัท",
-        matched: true
-      };
-    }
-    
+    const att = attendanceList.find(a => a.userIdentifier === userIdentifier);
+
+    const rawName = sub?.userName || active?.userName || att?.userName || importedName || "";
+    const rawDept = sub?.department || active?.department || att?.department || importedDept || "";
+    const rawCompany = sub?.company || active?.company || att?.company || importedCompany || "";
+
+    const isSubmittedOrActive = !!(sub || active);
+    const isMatched = isSubmittedOrActive || !!att;
+
+    const userName = rawName.trim() || (isSubmittedOrActive ? "ไม่ระบุชื่อ" : "ยังไม่เข้าสอบ (ไม่พบชื่อ)");
+    const department = rawDept.trim() || (isSubmittedOrActive ? "ไม่ระบุแผนก" : "ยังไม่เข้าสอบ (ไม่พบแผนก)");
+    const company = rawCompany.trim() || (isSubmittedOrActive ? "ไม่ระบุบริษัท" : "ยังไม่เข้าสอบ (ไม่พบบริษัท)");
+
     return {
-      userName: importedName || "ยังไม่เข้าสอบ (ไม่พบชื่อ)",
-      department: importedDept || "ยังไม่เข้าสอบ (ไม่พบแผนก)",
-      company: importedCompany || "ยังไม่เข้าสอบ (ไม่พบบริษัท)",
-      matched: false
+      userName,
+      department,
+      company,
+      matched: isMatched
     };
   };
 
@@ -1269,6 +1264,10 @@ export default function CampaignAnalytics({ campaign, onRefresh }: CampaignAnaly
             }
 
             activeParticipants.forEach((p) => {
+              if (lobbyMap.has(p.userIdentifier)) {
+                // If user has already submitted (PASSED or FAILED), retain the completed submission status
+                return;
+              }
               const resolved = resolveAttendanceDetails(p.userIdentifier, p.userName, p.department, p.company);
               lobbyMap.set(p.userIdentifier, {
                 userIdentifier: p.userIdentifier,
